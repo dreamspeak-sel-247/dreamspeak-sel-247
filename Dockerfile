@@ -5,9 +5,7 @@ WORKDIR /app
 COPY package*.json ./
 RUN npm install --no-audit --no-fund
 
-COPY tsconfig.json ./
-COPY src ./src
-COPY public ./public
+COPY . .
 
 RUN npm run build
 
@@ -16,4 +14,4 @@ ENV PORT=8080
 
 EXPOSE 8080
 
-CMD ["node", "dist/server.js"]
+CMD ["npm", "start"]

@@ -2,10 +2,11 @@
   "name": "dreamspeak-sel-chatbot",
   "version": "2.4.0",
   "description": "DREAMSPEAK-SEL – HIỆP SĨ TỰ VẤN 24/7: Hệ thống Chatbot AI Giáo dục Sư phạm & Phát triển Năng lực Cảm xúc - Xã hội (SEL 5 CHẠM) cho học sinh THCS & THPT",
-  "main": "dist/server.js",
+  "main": "start-production.js",
   "scripts": {
-    "build": "tsc",
-    "start": "node dist/server.js",
+    "build": "node start-production.js --prepare",
+    "build:ts": "tsc",
+    "start": "node start-production.js",
     "dev": "tsc && node dist/server.js",
     "test": "node scripts/run-tests.js"
   },
