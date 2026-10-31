@@ -1,0 +1,323 @@
+<!DOCTYPE html>
+<html lang="vi" data-theme="light">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>DREAMSPEAK-SEL – HIỆP SĨ TỰ VẤN 24/7 | Chatbot AI Giáo dục & Tư vấn SEL 5 CHẠM</title>
+  <meta name="description" content="DREAMSPEAK-SEL – HIỆP SĨ TỰ VẤN 24/7: Trợ lý AI hỗ trợ học tập theo phương pháp gợi mở Socratic, tích hợp thanh công thức Toán học, phân tích hình ảnh bài tập và phát triển năng lực cảm xúc - xã hội (SEL 5 CHẠM) cho học sinh THCS & THPT." />
+
+  <!-- Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+
+  <!-- KaTeX for High-Precision Math Rendering -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css" crossorigin="anonymous" />
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.js" crossorigin="anonymous"></script>
+
+  <!-- MathLive for Interactive Visual Math Input -->
+  <script defer src="https://unpkg.com/mathlive"></script>
+
+  <!-- App Styles -->
+  <link rel="stylesheet" href="/css/styles.css" />
+</head>
+<body>
+  <!-- Top Header Bar -->
+  <header class="app-header">
+    <div class="brand-wrap">
+      <button id="btnMobileMenu" class="btn-icon mobile-drawer-toggle" title="Mở danh mục 5 CHẠM & Tình huống">
+        ☰ 5 CHẠM
+      </button>
+      <div class="brand-logo" title="DREAMSPEAK-SEL">🛡️</div>
+      <div>
+        <div class="brand-title">DREAMSPEAK-SEL – HIỆP SĨ TỰ VẤN 24/7</div>
+        <div class="brand-subtitle">
+          <span class="status-dot" id="aiStatusDot"></span>
+          <span id="aiStatusText">AI Sư phạm &amp; SEL 5 CHẠM trực tuyến 24/7 • Không cần đăng nhập</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="header-controls">
+      <select id="selectGrade" class="select-pill" title="Chọn khối lớp của em">
+        <option value="Lớp 6">🎓 Lớp 6</option>
+        <option value="Lớp 7">🎓 Lớp 7</option>
+        <option value="Lớp 8">🎓 Lớp 8</option>
+        <option value="Lớp 9" selected>🎓 Lớp 9</option>
+        <option value="Lớp 10">🎓 Lớp 10</option>
+        <option value="Lớp 11">🎓 Lớp 11</option>
+        <option value="Lớp 12">🎓 Lớp 12</option>
+      </select>
+
+      <select id="selectSubject" class="select-pill" title="Chọn môn học hoặc lĩnh vực tư vấn">
+        <option value="Toán học" selected>📐 Toán học</option>
+        <option value="Khoa học tự nhiên">🔬 Khoa học tự nhiên</option>
+        <option value="Vật lí">⚡ Vật lí</option>
+        <option value="Hóa học">🧪 Hóa học</option>
+        <option value="Sinh học">🧬 Sinh học</option>
+        <option value="Ngữ văn">📖 Ngữ văn</option>
+        <option value="Tiếng Anh">🌍 Tiếng Anh</option>
+        <option value="Tin học">💻 Tin học</option>
+        <option value="Lịch sử & Địa lí">🗺️ Lịch sử &amp; Địa lí</option>
+        <option value="GDCD / GDKT&PL">⚖️ GDCD / GDKT&amp;PL</option>
+        <option value="Tư vấn Tâm lý & Kỹ năng SEL">💛 Tư vấn SEL 5 CHẠM</option>
+      </select>
+
+      <button id="btnNewChat" class="btn-icon" title="Làm mới cuộc trò chuyện">
+        🔄 Làm mới
+      </button>
+      <button id="btnClearHistory" class="btn-icon" title="Xóa lịch sử trò chuyện trên trình duyệt">
+        🗑️ Xóa lịch sử
+      </button>
+      <button id="btnShareModal" class="btn-icon btn-primary-pill" title="Chia sẻ đường link công khai & Mã QR">
+        📲 Chia sẻ &amp; QR
+      </button>
+      <button id="btnGuideModal" class="btn-icon" title="Giới thiệu, hướng dẫn sử dụng & Chính sách an toàn">
+        ℹ️ Giới thiệu
+      </button>
+      <a href="/admin" class="btn-icon" title="Trang Quản trị Hệ thống & Cấu hình AI">
+        ⚙️ Quản trị
+      </a>
+      <button id="btnThemeToggle" class="btn-icon" title="Chuyển đổi chế độ Sáng / Tối">
+        🌙
+      </button>
+    </div>
+  </header>
+
+  <!-- Main Workspace -->
+  <div class="app-layout">
+    <!-- Left Sidebar: 5 Nội dung CHẠM & 9 Tình huống thực tế -->
+    <aside class="sidebar" id="sidebarPanel">
+      <div>
+        <div class="sidebar-section-title">
+          <span>🌟 MÔ HÌNH SEL – 5 NỘI DUNG CHẠM</span>
+          <span style="font-size:0.68rem; color:var(--primary);">Chọn trụ cột</span>
+        </div>
+        <div class="pillar-list" id="pillarListContainer">
+          <!-- Populated dynamically from /api/config/public -->
+        </div>
+      </div>
+
+      <div>
+        <div class="sidebar-section-title">
+          <span>🎯 9 TÌNH HUỐNG THỰC TẾ HỌC ĐƯỜNG</span>
+        </div>
+        <div class="scenario-list" id="scenarioListContainer">
+          <!-- Populated dynamically -->
+        </div>
+      </div>
+
+      <div class="calm-box">
+        <h4>🌿 Góc Điều Hòa Nhanh (4-7-8)</h4>
+        <p style="margin-bottom:0.45rem;">Nếu em đang hồi hộp trước bài kiểm tra hoặc căng thẳng, hãy bấm nút dưới đây để tập hít thở 30 giây cùng Hiệp sĩ Tự vấn nhé!</p>
+        <button id="btnBreathingExercise" class="btn-icon" style="width:100%; justify-content:center; border-color:var(--success); color:var(--success);">
+          🧘 Thực hành hít thở bình tĩnh ngay
+        </button>
+        <div id="breathingStatus" style="display:none; margin-top:0.45rem; font-weight:700; text-align:center; color:var(--primary);"></div>
+      </div>
+    </aside>
+
+    <!-- Center Chat Area -->
+    <main class="chat-main">
+      <div class="chat-messages" id="chatMessagesContainer">
+        <!-- Welcome & Intro Banner -->
+        <div class="intro-card" id="welcomeIntroCard">
+          <h2>🛡️ Xin chào! Mình là DREAMSPEAK-SEL – Hiệp sĩ Tự vấn 24/7</h2>
+          <p>
+            Không gian học tập thông minh và đồng hành cảm xúc – xã hội (<strong>5 CHẠM: Chạm mình • Điều hòa • Hiểu bạn • Cùng làm • Chọn đúng</strong>) dành cho học sinh <strong>Lớp 6 đến Lớp 12</strong>. Mình không giải bài thay em thụ động mà sẽ <strong>hướng dẫn từng bước gợi mở</strong> để em thực sự hiểu bản chất bài học!
+          </p>
+          <div class="quick-chips">
+            <button class="chip-btn" data-quick-prompt="Hướng dẫn em từng bước giải phương trình bậc hai $x^2 - 5x + 6 = 0$ và cách kiểm tra nghiệm.">
+              📐 Giải phương trình bậc hai $x^2 - 5x + 6 = 0$
+            </button>
+            <button class="chip-btn" data-quick-prompt="Hướng dẫn em giải hệ phương trình $\begin{cases} 2x + y = 5 \\ x - y = 1 \end{cases}$ từng bước.">
+              🧮 Giải hệ phương trình hai ẩn
+            </button>
+            <button class="chip-btn" data-quick-prompt="Giải thích giúp em định luật Ôm và công thức $I = \frac{U}{R}$ kèm ví dụ thực tế dễ hiểu.">
+              ⚡ Giải thích Vật lí &amp; KHTN
+            </button>
+            <button class="chip-btn" data-quick-prompt="Dạo này em thấy áp lực điểm số và mất động lực học tập, Hiệp sĩ Tự vấn giúp em điều hòa cảm xúc nhé!">
+              🌿 CHẠM 2: Vượt qua áp lực điểm số
+            </button>
+            <button class="chip-btn" data-quick-prompt="Làm sao để em sử dụng AI hỗ trợ học tập thông minh mà không bị phụ thuộc vào AI?">
+              🧭 CHẠM 5: Không phụ thuộc vào AI
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Interactive Math Formula Toolbar Drawer -->
+      <section class="math-drawer" id="mathDrawer">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:0.5rem;">
+          <div style="font-weight:800; font-size:0.9rem; color:var(--primary);">
+            ∑ Thanh Công Cụ Công Thức Toán Học Trực Quan (THCS &amp; THPT – MathLive + KaTeX)
+          </div>
+          <div style="display:flex; gap:0.4rem;">
+            <button id="btnClearMath" class="btn-icon" style="padding:0.25rem 0.6rem; font-size:0.75rem;">Xóa công thức</button>
+            <button id="btnCloseMathDrawer" class="btn-icon" style="padding:0.25rem 0.6rem; font-size:0.75rem;">✕ Đóng</button>
+          </div>
+        </div>
+
+        <div class="math-tabs" id="mathTabsBar"></div>
+        <div class="math-symbols-grid" id="mathSymbolsGrid"></div>
+
+        <div class="math-editor-row">
+          <div class="math-input-box">
+            <div class="math-box-label">
+              <span>1. Nhập trực quan (MathLive) hoặc mã LaTeX:</span>
+              <span style="color:var(--primary);">Hỗ trợ bàn phím thường &amp; nút bấm</span>
+            </div>
+            <math-field id="mathLiveField" virtual-keyboard-mode="manual">x^2 - 5x + 6 = 0</math-field>
+            <input
+              type="text"
+              id="latexRawInput"
+              class="latex-raw-input"
+              placeholder="Nhập hoặc chỉnh sửa công thức LaTeX (ví dụ: \frac{x+1}{x-1} = 2)..."
+              value="x^2 - 5x + 6 = 0"
+            />
+          </div>
+
+          <div class="math-preview-box">
+            <div class="math-box-label">
+              <span>2. Xem trước công thức hiển thị chuẩn (KaTeX):</span>
+              <span id="mathValidBadge" style="color:var(--success);">✓ Hiển thị chính xác</span>
+            </div>
+            <div id="katexLivePreview" class="katex-live-preview"></div>
+            <div style="display:flex; gap:0.45rem; justify-content:flex-end; margin-top:0.35rem;">
+              <button id="btnInsertMathToInput" class="btn-icon btn-primary-pill" style="font-size:0.78rem;">
+                ➕ Chèn công thức vào câu hỏi
+              </button>
+              <button id="btnSendMathDirectly" class="btn-icon" style="font-size:0.78rem; border-color:var(--primary); color:var(--primary);">
+                🚀 Gửi ngay bài toán này
+              </button>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Bottom Composer Area -->
+      <footer class="composer-area">
+        <!-- Image Attachment Preview Bar -->
+        <div class="attachment-preview-bar" id="imagePreviewBar">
+          <img id="imagePreviewThumb" class="attachment-thumb" src="" alt="Ảnh bài tập đính kèm" />
+          <div style="flex:1;">
+            <div id="imagePreviewName" style="font-size:0.82rem; font-weight:700;">Ảnh bài tập đã chọn</div>
+            <div id="imagePreviewMeta" style="font-size:0.73rem; color:var(--text-secondary);">Đã tối ưu kích thước sẵn sàng gửi cho AI Vision</div>
+          </div>
+          <button id="btnRemoveImage" class="btn-icon" style="color:var(--danger); border-color:var(--danger);">
+            ✕ Xóa ảnh
+          </button>
+        </div>
+
+        <!-- Action Buttons Row (1. Nhập văn bản, 2. Công thức toán, 3. Tải hình ảnh, 4. Chế độ sư phạm) -->
+        <div class="composer-toolbar">
+          <div class="composer-tools-left">
+            <button id="btnToggleMath" class="btn-icon" title="Mở thanh công cụ nhập công thức Toán học (Phân số, Căn, Hệ PT, Hình học...)">
+              ∑ Công thức Toán
+            </button>
+
+            <label for="fileImageInput" class="btn-icon" title="Chụp ảnh hoặc tải ảnh bài tập từ điện thoại / máy tính" style="cursor:pointer;">
+              📷 Tải ảnh bài tập
+            </label>
+            <input type="file" id="fileImageInput" accept="image/jpeg,image/png,image/webp,image/gif" style="display:none;" />
+
+            <button id="btnSampleImageTest" class="btn-icon" title="Tạo nhanh 1 ảnh đề bài tập mẫu để thử nghiệm tính năng AI đọc ảnh">
+              🖼️ Thử ảnh đề toán mẫu
+            </button>
+          </div>
+
+          <div class="composer-tools-right">
+            <select id="selectPedagogyMode" class="select-pill" title="Chế độ hướng dẫn sư phạm của AI">
+              <option value="socratic" selected>🧭 Chế độ: Gợi mở từng bước (Sư phạm)</option>
+              <option value="simplified">💡 Chế độ: Giải thích đơn giản + Ví dụ</option>
+              <option value="verify-solution">✅ Chế độ: Đối chiếu lời giải chi tiết</option>
+            </select>
+          </div>
+        </div>
+
+        <!-- Textarea & Send / Stop Buttons -->
+        <div class="composer-box">
+          <textarea
+            id="chatInputTextarea"
+            class="chat-textarea"
+            rows="1"
+            placeholder="Nhập câu hỏi bài tập, bấm [∑ Công thức Toán], đính kèm [📷 Ảnh bài tập] hoặc chia sẻ tâm sự 5 CHẠM... (Enter để gửi, Shift+Enter xuống dòng)"
+          ></textarea>
+          <button id="btnStopGenerating" class="btn-stop" title="Dừng phản hồi hiện tại">
+            ⏹ Dừng
+          </button>
+          <button id="btnSendMessage" class="btn-send" title="Gửi câu hỏi cho Hiệp sĩ Tự vấn">
+            Gửi ➤
+          </button>
+        </div>
+      </footer>
+    </main>
+  </div>
+
+  <!-- Modal 1: Chia sẻ Công khai & Mã QR -->
+  <div class="modal-backdrop" id="modalShare">
+    <div class="modal-card">
+      <div class="modal-header">
+        <h3>📲 Chia sẻ DREAMSPEAK-SEL (Truy cập Công khai Không cần Đăng nhập)</h3>
+        <button class="btn-icon" data-close-modal="modalShare">✕</button>
+      </div>
+      <p style="font-size:0.86rem; color:var(--text-secondary);">
+        Mọi học sinh và giáo viên đều có thể quét mã QR hoặc mở đường link dưới đây trực tiếp trên điện thoại (Android, iPhone) và máy tính <strong>mà không cần tạo tài khoản hay đăng nhập</strong>:
+      </p>
+
+      <div class="qr-container">
+        <img id="shareQrImage" src="" alt="Mã QR truy cập DREAMSPEAK-SEL" />
+        <div style="font-size:0.78rem; color:var(--text-muted); margin-top:0.45rem;">
+          Quét mã QR bằng Camera điện thoại hoặc Zalo để mở ngay
+        </div>
+      </div>
+
+      <div class="share-url-box">
+        <input type="text" id="sharePublicUrlInput" class="share-url-input" readonly />
+        <button id="btnCopyShareUrl" class="btn-icon btn-primary-pill">📋 Sao chép Link</button>
+      </div>
+
+      <div style="display:flex; gap:0.5rem; flex-wrap:wrap; justify-content:center; margin-top:0.85rem;">
+        <button id="btnDownloadQr" class="btn-icon">⬇️ Tải ảnh Mã QR</button>
+        <button id="btnShareZalo" class="btn-icon" style="border-color:#0068ff; color:#0068ff;">💬 Chia sẻ qua Zalo</button>
+        <button id="btnShareFacebook" class="btn-icon" style="border-color:#1877f2; color:#1877f2;">📘 Chia sẻ Facebook</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal 2: Giới thiệu, Hướng dẫn & Chính sách An toàn Học sinh -->
+  <div class="modal-backdrop" id="modalGuide">
+    <div class="modal-card">
+      <div class="modal-header">
+        <h3>🛡️ Giới thiệu DREAMSPEAK-SEL &amp; Cam kết Bảo vệ Học sinh</h3>
+        <button class="btn-icon" data-close-modal="modalGuide">✕</button>
+      </div>
+      <div style="font-size:0.86rem; display:flex; flex-direction:column; gap:0.75rem;">
+        <div>
+          <strong style="color:var(--primary);">1. Triết lý nghiên cứu (Đề tài NCKH 26-27):</strong>
+          <p><strong>DREAMSPEAK-SEL – HIỆP SĨ TỰ VẤN 24/7</strong> là trợ lý AI giáo dục kết hợp giữa <em>Phương pháp Sư phạm Gợi mở (Socratic)</em> và <em>Mô hình Giáo dục Cảm xúc – Xã hội 5 CHẠM</em> (Chạm mình – Điều hòa – Hiểu bạn – Cùng làm – Chọn đúng).</p>
+        </div>
+        <div>
+          <strong style="color:var(--primary);">2. Hướng dẫn sử dụng hiệu quả:</strong>
+          <ul style="margin-left:1.2rem; margin-top:0.25rem;">
+            <li><strong>Hỏi bài tập các môn (Lớp 6 – 12):</strong> Chọn khối lớp, môn học, bấm <strong>∑ Công thức Toán</strong> hoặc <strong>📷 Tải ảnh bài tập</strong> để AI hướng dẫn từng bước.</li>
+            <li><strong>Khi chưa hiểu:</strong> Bấm nút <em>"💡 Giải thích đơn giản hơn"</em> ngay dưới câu trả lời của AI.</li>
+            <li><strong>Tư vấn tâm lý &amp; kỹ năng SEL:</strong> Chọn 1 trong <strong>5 nội dung CHẠM</strong> hoặc <strong>9 tình huống thực tế</strong> ở thanh bên trái.</li>
+          </ul>
+        </div>
+        <div style="background:var(--bg-muted); padding:0.75rem; border-radius:8px; border-left:4px solid var(--success);">
+          <strong>🔒 Chính sách Quyền riêng tư &amp; Bảo vệ Trẻ vị thành niên:</strong>
+          <ul style="margin-left:1.2rem; margin-top:0.25rem;">
+            <li>Không yêu cầu đăng nhập, không thu thập họ tên, số điện thoại hay địa chỉ của học sinh.</li>
+            <li>Không công khai nội dung trò chuyện và không lưu trữ hình ảnh cá nhân của học sinh.</li>
+            <li>AI đóng vai trò người bạn đồng hành, không thay thế thầy cô giáo, cha mẹ hoặc chuyên gia tâm lý. Khi cần hỗ trợ khẩn cấp, hãy liên hệ Thầy/Cô chủ nhiệm hoặc Tổng đài Quốc gia Bảo vệ Trẻ em <strong>111</strong> (miễn phí 24/7).</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="/js/mathToolbar.js"></script>
+  <script src="/js/app.js"></script>
+</body>
+</html>

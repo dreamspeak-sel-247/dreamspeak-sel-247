@@ -1,0 +1,15 @@
+services:
+  - type: web
+    name: dreamspeak-sel-247
+    env: node
+    plan: free
+    buildCommand: npm install && npm run build
+    startCommand: npm start
+    healthCheckPath: /api/health
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: 8080
+      - key: GEMINI_API_KEY
+        sync: false

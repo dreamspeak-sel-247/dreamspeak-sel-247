@@ -1,0 +1,46 @@
+{
+  "name": "dreamspeak-sel-chatbot",
+  "version": "2.4.0",
+  "description": "DREAMSPEAK-SEL – HIỆP SĨ TỰ VẤN 24/7: Hệ thống Chatbot AI Giáo dục Sư phạm & Phát triển Năng lực Cảm xúc - Xã hội (SEL 5 CHẠM) cho học sinh THCS & THPT",
+  "main": "dist/server.js",
+  "scripts": {
+    "build": "tsc",
+    "start": "node dist/server.js",
+    "dev": "tsc && node dist/server.js",
+    "test": "node scripts/run-tests.js"
+  },
+  "keywords": [
+    "DREAMSPEAK-SEL",
+    "SEL",
+    "5-CHAM",
+    "Education-AI",
+    "Gemini-API",
+    "MathLive",
+    "KaTeX",
+    "Vietnam-Education"
+  ],
+  "author": "Nhóm Nghiên cứu Khoa học NCKH 26-27",
+  "license": "MIT",
+  "dependencies": {
+    "@google/genai": "^1.0.0",
+    "compression": "^1.7.5",
+    "cors": "^2.8.5",
+    "dotenv": "^16.4.7",
+    "express": "^4.21.2",
+    "express-rate-limit": "^7.5.0",
+    "helmet": "^8.0.0",
+    "qrcode": "^1.5.4",
+    "tesseract.js": "^5.1.1"
+  },
+  "devDependencies": {
+    "@types/compression": "^1.7.5",
+    "@types/cors": "^2.8.17",
+    "@types/express": "^5.0.0",
+    "@types/node": "^20.17.10",
+    "@types/qrcode": "^1.5.5",
+    "typescript": "^5.7.2"
+  },
+  "engines": {
+    "node": ">=20.0.0"
+  }
+}
