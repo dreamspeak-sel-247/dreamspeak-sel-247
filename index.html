@@ -1,323 +1,721 @@
 <!DOCTYPE html>
-<html lang="vi" data-theme="light">
+<html lang="vi">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-  <title>DREAMSPEAK-SEL – HIỆP SĨ TỰ VẤN 24/7 | Chatbot AI Giáo dục & Tư vấn SEL 5 CHẠM</title>
-  <meta name="description" content="DREAMSPEAK-SEL – HIỆP SĨ TỰ VẤN 24/7: Trợ lý AI hỗ trợ học tập theo phương pháp gợi mở Socratic, tích hợp thanh công thức Toán học, phân tích hình ảnh bài tập và phát triển năng lực cảm xúc - xã hội (SEL 5 CHẠM) cho học sinh THCS & THPT." />
-
-  <!-- Fonts -->
-  <link rel="preconnect" href="https://fonts.googleapis.com" />
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
-
-  <!-- KaTeX for High-Precision Math Rendering -->
-  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css" crossorigin="anonymous" />
-  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.js" crossorigin="anonymous"></script>
-
-  <!-- MathLive for Interactive Visual Math Input -->
-  <script defer src="https://unpkg.com/mathlive"></script>
-
-  <!-- App Styles -->
-  <link rel="stylesheet" href="/css/styles.css" />
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>DreamSpeak-SEL | Chatbot Hiệp Sĩ Tự Vấn 24/7</title>
+  <link rel="stylesheet" href="styles.css">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  
+  <!-- KaTeX: Thư viện hiển thị công thức Toán học chuẩn quốc tế -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"></script>
 </head>
 <body>
-  <!-- Top Header Bar -->
-  <header class="app-header">
-    <div class="brand-wrap">
-      <button id="btnMobileMenu" class="btn-icon mobile-drawer-toggle" title="Mở danh mục 5 CHẠM & Tình huống">
-        ☰ 5 CHẠM
-      </button>
-      <div class="brand-logo" title="DREAMSPEAK-SEL">🛡️</div>
-      <div>
-        <div class="brand-title">DREAMSPEAK-SEL – HIỆP SĨ TỰ VẤN 24/7</div>
-        <div class="brand-subtitle">
-          <span class="status-dot" id="aiStatusDot"></span>
-          <span id="aiStatusText">AI Sư phạm &amp; SEL 5 CHẠM trực tuyến 24/7 • Không cần đăng nhập</span>
+  <div class="app-container">
+    <!-- Sidebar / Navigation -->
+    <aside class="sidebar" id="sidebar">
+      <div class="brand-header">
+        <div class="logo-box">
+          <span class="logo-icon">🛡️</span>
+          <div class="logo-text">
+            <h2>DreamSpeak-SEL</h2>
+            <span class="subtext">Hiệp Sĩ Tự Vấn 24/7</span>
+          </div>
         </div>
-      </div>
-    </div>
-
-    <div class="header-controls">
-      <select id="selectGrade" class="select-pill" title="Chọn khối lớp của em">
-        <option value="Lớp 6">🎓 Lớp 6</option>
-        <option value="Lớp 7">🎓 Lớp 7</option>
-        <option value="Lớp 8">🎓 Lớp 8</option>
-        <option value="Lớp 9" selected>🎓 Lớp 9</option>
-        <option value="Lớp 10">🎓 Lớp 10</option>
-        <option value="Lớp 11">🎓 Lớp 11</option>
-        <option value="Lớp 12">🎓 Lớp 12</option>
-      </select>
-
-      <select id="selectSubject" class="select-pill" title="Chọn môn học hoặc lĩnh vực tư vấn">
-        <option value="Toán học" selected>📐 Toán học</option>
-        <option value="Khoa học tự nhiên">🔬 Khoa học tự nhiên</option>
-        <option value="Vật lí">⚡ Vật lí</option>
-        <option value="Hóa học">🧪 Hóa học</option>
-        <option value="Sinh học">🧬 Sinh học</option>
-        <option value="Ngữ văn">📖 Ngữ văn</option>
-        <option value="Tiếng Anh">🌍 Tiếng Anh</option>
-        <option value="Tin học">💻 Tin học</option>
-        <option value="Lịch sử & Địa lí">🗺️ Lịch sử &amp; Địa lí</option>
-        <option value="GDCD / GDKT&PL">⚖️ GDCD / GDKT&amp;PL</option>
-        <option value="Tư vấn Tâm lý & Kỹ năng SEL">💛 Tư vấn SEL 5 CHẠM</option>
-      </select>
-
-      <button id="btnNewChat" class="btn-icon" title="Làm mới cuộc trò chuyện">
-        🔄 Làm mới
-      </button>
-      <button id="btnClearHistory" class="btn-icon" title="Xóa lịch sử trò chuyện trên trình duyệt">
-        🗑️ Xóa lịch sử
-      </button>
-      <button id="btnShareModal" class="btn-icon btn-primary-pill" title="Chia sẻ đường link công khai & Mã QR">
-        📲 Chia sẻ &amp; QR
-      </button>
-      <button id="btnGuideModal" class="btn-icon" title="Giới thiệu, hướng dẫn sử dụng & Chính sách an toàn">
-        ℹ️ Giới thiệu
-      </button>
-      <a href="/admin" class="btn-icon" title="Trang Quản trị Hệ thống & Cấu hình AI">
-        ⚙️ Quản trị
-      </a>
-      <button id="btnThemeToggle" class="btn-icon" title="Chuyển đổi chế độ Sáng / Tối">
-        🌙
-      </button>
-    </div>
-  </header>
-
-  <!-- Main Workspace -->
-  <div class="app-layout">
-    <!-- Left Sidebar: 5 Nội dung CHẠM & 9 Tình huống thực tế -->
-    <aside class="sidebar" id="sidebarPanel">
-      <div>
-        <div class="sidebar-section-title">
-          <span>🌟 MÔ HÌNH SEL – 5 NỘI DUNG CHẠM</span>
-          <span style="font-size:0.68rem; color:var(--primary);">Chọn trụ cột</span>
-        </div>
-        <div class="pillar-list" id="pillarListContainer">
-          <!-- Populated dynamically from /api/config/public -->
-        </div>
+        <button class="mobile-close-btn" id="closeSidebarBtn">✕</button>
       </div>
 
-      <div>
-        <div class="sidebar-section-title">
-          <span>🎯 9 TÌNH HUỐNG THỰC TẾ HỌC ĐƯỜNG</span>
-        </div>
-        <div class="scenario-list" id="scenarioListContainer">
-          <!-- Populated dynamically -->
-        </div>
+      <div class="school-badge">
+        <span class="badge-dot"></span>
+        <span>Dự án THCS Lùng Phình - Lào Cai</span>
       </div>
 
-      <div class="calm-box">
-        <h4>🌿 Góc Điều Hòa Nhanh (4-7-8)</h4>
-        <p style="margin-bottom:0.45rem;">Nếu em đang hồi hộp trước bài kiểm tra hoặc căng thẳng, hãy bấm nút dưới đây để tập hít thở 30 giây cùng Hiệp sĩ Tự vấn nhé!</p>
-        <button id="btnBreathingExercise" class="btn-icon" style="width:100%; justify-content:center; border-color:var(--success); color:var(--success);">
-          🧘 Thực hành hít thở bình tĩnh ngay
+      <nav class="nav-menu">
+        <button class="nav-item active" data-tab="chat-tab">
+          <span class="icon">💬</span>
+          <span>Trò chuyện Socratic</span>
         </button>
-        <div id="breathingStatus" style="display:none; margin-top:0.45rem; font-weight:700; text-align:center; color:var(--primary);"></div>
+        <button class="nav-item" data-tab="sel-tab">
+          <span class="icon">🌿</span>
+          <span>Góc 5 CHẠM Cảm Xúc</span>
+        </button>
+        <button class="nav-item" data-tab="prompts-tab">
+          <span class="icon">📖</span>
+          <span>Cẩm nang 5 CHẠM Prompting</span>
+        </button>
+        <button class="nav-item" data-tab="honor-tab">
+          <span class="icon">🏅</span>
+          <span>Cam kết Honor Code</span>
+        </button>
+        <button class="nav-item" data-tab="sos-tab">
+          <span class="icon">🆘</span>
+          <span>Hỗ trợ khẩn cấp (SOS)</span>
+        </button>
+        <button class="nav-item" data-tab="about-tab">
+          <span class="icon">ℹ️</span>
+          <span>Giới thiệu & Quyền riêng tư</span>
+        </button>
+        <button class="nav-item share-nav-item" id="sidebarShareBtn">
+          <span class="icon">📲</span>
+          <span>Chia sẻ QR toàn trường</span>
+        </button>
+      </nav>
+
+      <div class="sidebar-status-box">
+        <div class="status-indicator">
+          <span class="pulse-dot"></span>
+          <span>Trạng thái: <strong id="engineModeText">Đang kết nối...</strong></span>
+        </div>
+        <p class="status-desc">Học sinh truy cập công khai 24/7, không cần tài khoản, không cần đăng nhập.</p>
+        <button class="btn-secondary-sm" id="openSettingsBtn">⚙️ Thông tin hệ thống / AI</button>
+      </div>
+
+      <div class="sidebar-footer">
+        <p>© 2026 DreamSpeak-SEL Initiative</p>
+        <p>Phát triển vì học sinh vùng cao Lào Cai</p>
       </div>
     </aside>
 
-    <!-- Center Chat Area -->
-    <main class="chat-main">
-      <div class="chat-messages" id="chatMessagesContainer">
-        <!-- Welcome & Intro Banner -->
-        <div class="intro-card" id="welcomeIntroCard">
-          <h2>🛡️ Xin chào! Mình là DREAMSPEAK-SEL – Hiệp sĩ Tự vấn 24/7</h2>
-          <p>
-            Không gian học tập thông minh và đồng hành cảm xúc – xã hội (<strong>5 CHẠM: Chạm mình • Điều hòa • Hiểu bạn • Cùng làm • Chọn đúng</strong>) dành cho học sinh <strong>Lớp 6 đến Lớp 12</strong>. Mình không giải bài thay em thụ động mà sẽ <strong>hướng dẫn từng bước gợi mở</strong> để em thực sự hiểu bản chất bài học!
-          </p>
-          <div class="quick-chips">
-            <button class="chip-btn" data-quick-prompt="Hướng dẫn em từng bước giải phương trình bậc hai $x^2 - 5x + 6 = 0$ và cách kiểm tra nghiệm.">
-              📐 Giải phương trình bậc hai $x^2 - 5x + 6 = 0$
-            </button>
-            <button class="chip-btn" data-quick-prompt="Hướng dẫn em giải hệ phương trình $\begin{cases} 2x + y = 5 \\ x - y = 1 \end{cases}$ từng bước.">
-              🧮 Giải hệ phương trình hai ẩn
-            </button>
-            <button class="chip-btn" data-quick-prompt="Giải thích giúp em định luật Ôm và công thức $I = \frac{U}{R}$ kèm ví dụ thực tế dễ hiểu.">
-              ⚡ Giải thích Vật lí &amp; KHTN
-            </button>
-            <button class="chip-btn" data-quick-prompt="Dạo này em thấy áp lực điểm số và mất động lực học tập, Hiệp sĩ Tự vấn giúp em điều hòa cảm xúc nhé!">
-              🌿 CHẠM 2: Vượt qua áp lực điểm số
-            </button>
-            <button class="chip-btn" data-quick-prompt="Làm sao để em sử dụng AI hỗ trợ học tập thông minh mà không bị phụ thuộc vào AI?">
-              🧭 CHẠM 5: Không phụ thuộc vào AI
-            </button>
-          </div>
-        </div>
-      </div>
-
-      <!-- Interactive Math Formula Toolbar Drawer -->
-      <section class="math-drawer" id="mathDrawer">
-        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:0.5rem;">
-          <div style="font-weight:800; font-size:0.9rem; color:var(--primary);">
-            ∑ Thanh Công Cụ Công Thức Toán Học Trực Quan (THCS &amp; THPT – MathLive + KaTeX)
-          </div>
-          <div style="display:flex; gap:0.4rem;">
-            <button id="btnClearMath" class="btn-icon" style="padding:0.25rem 0.6rem; font-size:0.75rem;">Xóa công thức</button>
-            <button id="btnCloseMathDrawer" class="btn-icon" style="padding:0.25rem 0.6rem; font-size:0.75rem;">✕ Đóng</button>
+    <!-- Main Content Area -->
+    <main class="main-content">
+      <!-- Top Bar -->
+      <header class="top-bar">
+        <div class="top-left">
+          <button class="mobile-toggle-btn" id="toggleSidebarBtn">☰</button>
+          <div class="active-tab-title">
+            <h1 id="pageTitle">Hiệp Sĩ Tự Vấn Socratic 24/7</h1>
+            <span class="badge-role">Không làm hộ – Cùng bạn tìm lời giải</span>
           </div>
         </div>
 
-        <div class="math-tabs" id="mathTabsBar"></div>
-        <div class="math-symbols-grid" id="mathSymbolsGrid"></div>
+        <div class="top-actions">
+          <button class="action-btn action-ai" id="topAiSetupBtn" title="Trạng thái kết nối Google Gemini AI">
+            <span>✨</span> <span id="topAiStatusLabel">AI: Kiểm tra kết nối</span>
+          </button>
+          <button class="action-btn action-share" id="openShareModalBtn" title="Chia sẻ mã QR cho toàn trường không giới hạn">
+            <span>📲</span> Chia sẻ QR
+          </button>
+          <button class="action-btn" id="quickBreathBtn" title="Thực hành thở 4-7-8 ngay">
+            <span>🌬️</span> Luyện thở 4-7-8
+          </button>
+          <button class="action-btn" id="clearChatBtn" title="Xóa lịch sử hội thoại hiện tại">
+            <span>🗑️</span> Xóa hội thoại
+          </button>
+        </div>
+      </header>
 
-        <div class="math-editor-row">
-          <div class="math-input-box">
-            <div class="math-box-label">
-              <span>1. Nhập trực quan (MathLive) hoặc mã LaTeX:</span>
-              <span style="color:var(--primary);">Hỗ trợ bàn phím thường &amp; nút bấm</span>
+      <!-- View: Chat Room -->
+      <section class="tab-view active" id="chat-tab">
+        <div class="chat-container">
+          <!-- SEL 6 Modes Selector Bar -->
+          <div class="sel-mode-bar-wrapper">
+            <span class="sel-bar-label">🎯 Chế độ SEL:</span>
+            <div class="sel-modes-scroll" id="selModesContainer">
+              <button type="button" class="sel-mode-pill active" data-mode="study" title="Giải thích, gợi ý, hướng dẫn tư duy từng bước">
+                <span class="pill-icon">📐</span> <span>Tự vấn học tập</span>
+              </button>
+              <button type="button" class="sel-mode-pill" data-mode="emotion" title="Nhận diện cảm xúc, suy nghĩ và nhu cầu (SEL 1 & 2)">
+                <span class="pill-icon">🌿</span> <span>Khám phá cảm xúc</span>
+              </button>
+              <button type="button" class="sel-mode-pill" data-mode="relationship" title="Xử lý bất đồng, lắng nghe và thấu cảm (SEL 3 & 4)">
+                <span class="pill-icon">🤝</span> <span>Hiểu bạn – Giao tiếp</span>
+              </button>
+              <button type="button" class="sel-mode-pill" data-mode="decision" title="Phân tích lựa chọn, hệ quả và trách nhiệm (SEL 5)">
+                <span class="pill-icon">⚖️</span> <span>Ra quyết định</span>
+              </button>
+              <button type="button" class="sel-mode-pill" data-mode="ai_safety" title="Đặt câu hỏi hiệu quả theo C-H-A-M-S và kiểm chứng">
+                <span class="pill-icon">🛡️</span> <span>AI an toàn</span>
+              </button>
+              <button type="button" class="sel-mode-pill" data-mode="free" title="Tâm sự và trao đổi trong phạm vi học đường an toàn">
+                <span class="pill-icon">💬</span> <span>Trò chuyện tự do</span>
+              </button>
             </div>
-            <math-field id="mathLiveField" virtual-keyboard-mode="manual">x^2 - 5x + 6 = 0</math-field>
-            <input
-              type="text"
-              id="latexRawInput"
-              class="latex-raw-input"
-              placeholder="Nhập hoặc chỉnh sửa công thức LaTeX (ví dụ: \frac{x+1}{x-1} = 2)..."
-              value="x^2 - 5x + 6 = 0"
-            />
           </div>
 
-          <div class="math-preview-box">
-            <div class="math-box-label">
-              <span>2. Xem trước công thức hiển thị chuẩn (KaTeX):</span>
-              <span id="mathValidBadge" style="color:var(--success);">✓ Hiển thị chính xác</span>
+          <!-- Identity & Rule Banner -->
+          <div class="identity-banner">
+            <div class="banner-icon">🛡️</div>
+            <div class="banner-body">
+              <div class="banner-top-row">
+                <strong>DreamSpeak-SEL – Hiệp Sĩ Tự Vấn 24/7</strong>
+                <div class="ai-status-pill" id="aiStatusPill">
+                  <span class="ai-pulse-dot" id="aiPulseDot"></span>
+                  <span id="aiStatusPillText">Chế độ AI: Đang kết nối</span>
+                  <button type="button" class="btn-pill-action" id="pillChangeAiBtn">Chi tiết</button>
+                </div>
+              </div>
+              <p>Tôi là <strong>Trí tuệ nhân tạo (AI) - Hiệp Sĩ Tự Vấn</strong>, người bạn đồng hành gợi mở tư duy của học sinh THCS. Tôi <strong>tuyệt đối KHÔNG làm hộ bài tập hay chép văn mẫu</strong>, mà sẽ đặt câu hỏi từng bước để giúp bạn tự tìm ra câu trả lời bằng chính trí tuệ của mình!</p>
             </div>
-            <div id="katexLivePreview" class="katex-live-preview"></div>
-            <div style="display:flex; gap:0.45rem; justify-content:flex-end; margin-top:0.35rem;">
-              <button id="btnInsertMathToInput" class="btn-icon btn-primary-pill" style="font-size:0.78rem;">
-                ➕ Chèn công thức vào câu hỏi
+          </div>
+
+          <!-- Chat Messages Area -->
+          <div class="chat-messages" id="chatMessages">
+            <!-- Initial welcome message from bot -->
+            <div class="message-wrapper bot">
+              <div class="message-avatar">🛡️</div>
+              <div class="message-bubble">
+                <div class="bubble-header">
+                  <span class="sender-name">Hiệp Sĩ Tự Vấn</span>
+                  <span class="time-tag">Bây giờ</span>
+                </div>
+                <div class="bubble-content">
+                  <p>Chào bạn học sinh thân mến! 👋</p>
+                  <p><em>"AI không làm hộ bạn. AI giúp bạn tự suy nghĩ, hiểu cảm xúc và lựa chọn có trách nhiệm."</em></p>
+                  <p>Hôm nay bạn đang gặp thử thách học tập nào hay có điều gì băn khoăn trong lòng không? Bạn có thể nhập câu hỏi, gõ công thức Toán học hoặc chụp ảnh đề bài để Hiệp sĩ hướng dẫn nhé!</p>
+                  
+                  <div class="socratic-tips-box">
+                    <strong>💡 Gợi ý bắt đầu nhanh:</strong>
+                    <div class="quick-chips">
+                      <button class="chip" data-query="Giúp mình hiểu bài này: Giải phương trình tìm x: 2x + 5 = 15" data-mode="study">📐 Giúp mình giải phương trình: 2x + 5 = 15</button>
+                      <button class="chip" data-query="Tính diện tích hình thang có đáy a = 8cm, b = 12cm và chiều cao h = 5cm" data-mode="study">📐 Diện tích hình thang a=8, b=12, h=5</button>
+                      <button class="chip" data-query="Mình đang căng thẳng và lo lắng vì điểm kiểm tra gần đây..." data-mode="emotion">😰 Mình đang căng thẳng vì điểm kiểm tra</button>
+                      <button class="chip" data-query="Mình và bạn cùng bàn đang mâu thuẫn, bạn ấy không chịu nói chuyện với mình..." data-mode="relationship">🤝 Mình và bạn đang mâu thuẫn</button>
+                      <button class="chip" data-query="Làm sao để mình kiểm chứng câu trả lời của AI xem có chính xác không?" data-mode="ai_safety">🛡️ Làm sao kiểm chứng câu trả lời của AI?</button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Input Controls -->
+          <div class="chat-input-area">
+            <!-- Math Formula Toolbar -->
+            <div class="math-toolbar" id="mathToolbar">
+              <div class="math-toolbar-header">
+                <button type="button" class="btn-math-toggle" id="toggleMathPanelBtn" title="Bật/Tắt bàn phím ký hiệu toán học đầy đủ">
+                  <span>📐 Bàn phím Toán học & KaTeX</span>
+                  <span class="math-toggle-icon">▾</span>
+                </button>
+                <div class="quick-math-formulas">
+                  <span class="formula-label">Công thức nhanh:</span>
+                  <button type="button" class="math-formula-chip" data-insert="S = \frac{(a + b) \cdot h}{2}" title="Diện tích hình thang">S hình thang</button>
+                  <button type="button" class="math-formula-chip" data-insert="S = \frac{a \cdot h}{2}" title="Diện tích hình tam giác">S tam giác</button>
+                  <button type="button" class="math-formula-chip" data-insert="S = \pi \cdot r^2" title="Diện tích hình tròn">S hình tròn</button>
+                  <button type="button" class="math-formula-chip" data-insert="a^2 + b^2 = c^2" title="Định lý Pythagore trong tam giác vuông">Pythagore</button>
+                  <button type="button" class="math-formula-chip" data-insert="ax^2 + bx + c = 0" title="Phương trình bậc hai">PT Bậc 2</button>
+                  <button type="button" class="math-formula-chip" data-insert="\begin{cases} ax + by = c \\ dx + ey = f \end{cases}" title="Hệ hai phương trình bậc nhất">Hệ PT</button>
+                </div>
+              </div>
+
+              <!-- Collapsible Math Symbols Palette with Category Tabs -->
+              <div class="math-symbols-palette" id="mathSymbolsPalette">
+                <div class="math-palette-tabs">
+                  <button type="button" class="math-tab-btn active" data-tab-target="math-tab-basic">Phép tính & So sánh</button>
+                  <button type="button" class="math-tab-btn" data-tab-target="math-tab-powers">Phân số, Căn & Mũ</button>
+                  <button type="button" class="math-tab-btn" data-tab-target="math-tab-equations">Phương trình & Bất PT</button>
+                  <button type="button" class="math-tab-btn" data-tab-target="math-tab-geometry">Hình học & Góc</button>
+                  <button type="button" class="math-tab-btn" data-tab-target="math-tab-calculus">Đại số cao cấp & Ma trận</button>
+                </div>
+
+                <!-- Tab 1: Basic -->
+                <div class="math-symbol-group math-palette-group" id="math-tab-basic">
+                  <button type="button" class="math-sym-btn" data-sym="+">+</button>
+                  <button type="button" class="math-sym-btn" data-sym="-">−</button>
+                  <button type="button" class="math-sym-btn" data-sym="\times">×</button>
+                  <button type="button" class="math-sym-btn" data-sym="\div">÷</button>
+                  <button type="button" class="math-sym-btn" data-sym="\pm">±</button>
+                  <button type="button" class="math-sym-btn" data-sym="=">=</button>
+                  <button type="button" class="math-sym-btn" data-sym="\neq">≠</button>
+                  <button type="button" class="math-sym-btn" data-sym="\approx">≈</button>
+                  <button type="button" class="math-sym-btn" data-sym="\le">≤</button>
+                  <button type="button" class="math-sym-btn" data-sym="\ge">≥</button>
+                  <button type="button" class="math-sym-btn" data-sym="|x|">|x|</button>
+                  <button type="button" class="math-sym-btn" data-sym="( )">( )</button>
+                </div>
+
+                <!-- Tab 2: Powers, Roots & Fractions -->
+                <div class="math-symbol-group math-palette-group hidden" id="math-tab-powers">
+                  <button type="button" class="math-sym-btn" data-sym="\frac{a}{b}" title="Phân số">\frac{a}{b}</button>
+                  <button type="button" class="math-sym-btn" data-sym="x^2" title="Lũy thừa bậc 2">x²</button>
+                  <button type="button" class="math-sym-btn" data-sym="x^3" title="Lũy thừa bậc 3">x³</button>
+                  <button type="button" class="math-sym-btn" data-sym="x^n" title="Lũy thừa bậc n">xⁿ</button>
+                  <button type="button" class="math-sym-btn" data-sym="x_n" title="Chỉ số dưới">xₙ</button>
+                  <button type="button" class="math-sym-btn" data-sym="\sqrt{x}" title="Căn bậc hai">√x</button>
+                  <button type="button" class="math-sym-btn" data-sym="\sqrt[3]{x}" title="Căn bậc ba">∛x</button>
+                  <button type="button" class="math-sym-btn" data-sym="\sqrt[n]{x}" title="Căn bậc n">ⁿ√x</button>
+                </div>
+
+                <!-- Tab 3: Equations & Inequalities -->
+                <div class="math-symbol-group math-palette-group hidden" id="math-tab-equations">
+                  <button type="button" class="math-sym-btn" data-sym="ax + b = 0" title="PT bậc nhất">ax+b=0</button>
+                  <button type="button" class="math-sym-btn" data-sym="ax^2 + bx + c = 0" title="PT bậc hai">ax²+bx+c=0</button>
+                  <button type="button" class="math-sym-btn" data-sym="\Delta = b^2 - 4ac" title="Biệt thức Delta">Δ=b²-4ac</button>
+                  <button type="button" class="math-sym-btn" data-sym="\begin{cases} a_1 x + b_1 y = c_1 \\ a_2 x + b_2 y = c_2 \end{cases}" title="Hệ phương trình bậc nhất">Hệ PT</button>
+                  <button type="button" class="math-sym-btn" data-sym="ax + b \le 0" title="Bất phương trình">ax+b≤0</button>
+                  <button type="button" class="math-sym-btn" data-sym="\begin{cases} x \ge 0 \\ y \ge 0 \end{cases}" title="Hệ bất phương trình">Hệ BPT</button>
+                </div>
+
+                <!-- Tab 4: Geometry & Angles -->
+                <div class="math-symbol-group math-palette-group hidden" id="math-tab-geometry">
+                  <button type="button" class="math-sym-btn" data-sym="\angle ABC" title="Góc">∠ABC</button>
+                  <button type="button" class="math-sym-btn" data-sym="\Delta ABC" title="Tam giác">ΔABC</button>
+                  <button type="button" class="math-sym-btn" data-sym="\perp" title="Vuông góc">⊥</button>
+                  <button type="button" class="math-sym-btn" data-sym="\parallel" title="Song song">∥</button>
+                  <button type="button" class="math-sym-btn" data-sym="\pi" title="Số Pi">π</button>
+                  <button type="button" class="math-sym-btn" data-sym="^\circ" title="Độ">° (độ)</button>
+                  <button type="button" class="math-sym-btn" data-sym="\sim" title="Đồng dạng">∽</button>
+                  <button type="button" class="math-sym-btn" data-sym="\cong" title="Bằng nhau (hình học)">≅</button>
+                </div>
+
+                <!-- Tab 5: Higher Math & Matrix -->
+                <div class="math-symbol-group math-palette-group hidden" id="math-tab-calculus">
+                  <button type="button" class="math-sym-btn" data-sym="\sum_{i=1}^{n}" title="Tổng Sigma">∑ Sigma</button>
+                  <button type="button" class="math-sym-btn" data-sym="\int_{a}^{b} f(x)dx" title="Tích phân">∫ Tích phân</button>
+                  <button type="button" class="math-sym-btn" data-sym="\frac{df}{dx}" title="Đạo hàm">df/dx</button>
+                  <button type="button" class="math-sym-btn" data-sym="\lim_{x \to \infty}" title="Giới hạn">lim</button>
+                  <button type="button" class="math-sym-btn" data-sym="\begin{pmatrix} a & b \\ c & d \end{pmatrix}" title="Ma trận 2x2">Ma trận</button>
+                  <button type="button" class="math-sym-btn" data-sym="\infty" title="Vô cực">∞</button>
+                </div>
+
+                <!-- Live Formula Preview -->
+                <div class="math-formula-preview" id="mathFormulaPreview">
+                  <span class="preview-label">Xem trước:</span>
+                  <div class="preview-content" id="mathPreviewContent"><em>Bấm vào ký hiệu để chèn và xem trước công thức tại đây...</em></div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Image Preview Container (Khi học sinh chọn hoặc chụp ảnh) -->
+            <div id="imagePreviewContainer" class="image-preview-bar hidden">
+              <img id="imagePreviewThumb" class="image-preview-thumb" src="" alt="Ảnh bài tập">
+              <div class="image-preview-info">
+                <span id="imagePreviewName" class="image-preview-name">anh_bai_tap.png</span>
+                <span id="imagePreviewMeta" class="image-preview-meta">0 KB • Sẵn sàng gửi Gemini Vision</span>
+              </div>
+              <button type="button" id="btnRemoveImage" class="btn-remove-image">✕ Xóa ảnh</button>
+            </div>
+
+            <div class="input-actions-row">
+              <div style="display:flex; align-items:center; gap:8px;">
+                <input type="file" id="imageFileInput" accept="image/png,image/jpeg,image/jpg,image/webp" capture="environment" style="display:none">
+                <button type="button" class="btn-attach-image" id="btnAttachImage" title="Tải ảnh đề bài hoặc chụp từ camera điện thoại">
+                  <span>📷</span> <span>Gửi ảnh bài tập / Chụp ảnh</span>
+                </button>
+                <button type="button" class="btn-text-action" id="openPromptHelper">✨ Cẩm nang 100 Prompt</button>
+              </div>
+              <span class="input-hint">Quy tắc C-H-A-M-S: Chọn lọc • Hỏi mở • An toàn • Kiểm chứng • Tự chịu trách nhiệm</span>
+            </div>
+
+            <form id="chatForm" class="chat-input-form">
+              <textarea 
+                id="userInput" 
+                rows="1" 
+                placeholder="Nhập câu hỏi, bài tập hoặc công thức Toán học (Nhấn Enter để gửi)..."
+                required
+              ></textarea>
+              <button type="submit" id="sendBtn" class="send-btn" title="Gửi câu hỏi cho Hiệp Sĩ">
+                <span>Gửi</span>
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <line x1="22" y1="2" x2="11" y2="13"></line>
+                  <polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>
+                </svg>
               </button>
-              <button id="btnSendMathDirectly" class="btn-icon" style="font-size:0.78rem; border-color:var(--primary); color:var(--primary);">
-                🚀 Gửi ngay bài toán này
-              </button>
+            </form>
+            <div class="chat-disclaimer-note">
+              🛡️ <strong>Thông báo an toàn:</strong> DreamSpeak-SEL là trợ lý AI giáo dục, không phải con người, bác sĩ hay chuyên gia tâm lý. Thông tin do AI cung cấp cần đối chiếu với Sách giáo khoa và Thầy Cô.
             </div>
           </div>
         </div>
       </section>
 
-      <!-- Bottom Composer Area -->
-      <footer class="composer-area">
-        <!-- Image Attachment Preview Bar -->
-        <div class="attachment-preview-bar" id="imagePreviewBar">
-          <img id="imagePreviewThumb" class="attachment-thumb" src="" alt="Ảnh bài tập đính kèm" />
-          <div style="flex:1;">
-            <div id="imagePreviewName" style="font-size:0.82rem; font-weight:700;">Ảnh bài tập đã chọn</div>
-            <div id="imagePreviewMeta" style="font-size:0.73rem; color:var(--text-secondary);">Đã tối ưu kích thước sẵn sàng gửi cho AI Vision</div>
-          </div>
-          <button id="btnRemoveImage" class="btn-icon" style="color:var(--danger); border-color:var(--danger);">
-            ✕ Xóa ảnh
-          </button>
-        </div>
-
-        <!-- Action Buttons Row (1. Nhập văn bản, 2. Công thức toán, 3. Tải hình ảnh, 4. Chế độ sư phạm) -->
-        <div class="composer-toolbar">
-          <div class="composer-tools-left">
-            <button id="btnToggleMath" class="btn-icon" title="Mở thanh công cụ nhập công thức Toán học (Phân số, Căn, Hệ PT, Hình học...)">
-              ∑ Công thức Toán
-            </button>
-
-            <label for="fileImageInput" class="btn-icon" title="Chụp ảnh hoặc tải ảnh bài tập từ điện thoại / máy tính" style="cursor:pointer;">
-              📷 Tải ảnh bài tập
-            </label>
-            <input type="file" id="fileImageInput" accept="image/jpeg,image/png,image/webp,image/gif" style="display:none;" />
-
-            <button id="btnSampleImageTest" class="btn-icon" title="Tạo nhanh 1 ảnh đề bài tập mẫu để thử nghiệm tính năng AI đọc ảnh">
-              🖼️ Thử ảnh đề toán mẫu
-            </button>
+      <!-- View: 5 CHẠM SEL Hub -->
+      <section class="tab-view" id="sel-tab">
+        <div class="sel-container">
+          <div class="section-hero">
+            <h2>🌿 Chuỗi 5 CHẠM Rèn Luyện Cảm Xúc - Xã Hội (SEL)</h2>
+            <p>Khung chuẩn CASEL thích ứng với học sinh THCS: Nhận thức cảm xúc - Làm chủ bản thân - Thấu cảm và Vững vàng.</p>
           </div>
 
-          <div class="composer-tools-right">
-            <select id="selectPedagogyMode" class="select-pill" title="Chế độ hướng dẫn sư phạm của AI">
-              <option value="socratic" selected>🧭 Chế độ: Gợi mở từng bước (Sư phạm)</option>
-              <option value="simplified">💡 Chế độ: Giải thích đơn giản + Ví dụ</option>
-              <option value="verify-solution">✅ Chế độ: Đối chiếu lời giải chi tiết</option>
-            </select>
+          <div class="cham-grid">
+            <!-- CHẠM 1 -->
+            <div class="cham-card" id="chamCard1">
+              <div class="cham-badge">CHẠM 1</div>
+              <h3>Chạm Mình: Em Muốn Nói</h3>
+              <p class="cham-desc">Nhận diện và gọi tên chính xác trạng thái cảm xúc của bạn hôm nay.</p>
+              
+              <div class="emotion-selector">
+                <p class="selector-label">Hiện tại bạn cảm thấy thế nào?</p>
+                <div class="mood-emojis">
+                  <button class="mood-btn" data-mood="Hân hoan / Tự tin" data-color="#10B981">😊 Tự tin</button>
+                  <button class="mood-btn" data-mood="Bình yên / Tĩnh lặng" data-color="#3B82F6">😌 Bình yên</button>
+                  <button class="mood-btn" data-mood="Lo âu / Căng thẳng" data-color="#F59E0B">😰 Căng thẳng</button>
+                  <button class="mood-btn" data-mood="Buồn bã / Mệt mỏi" data-color="#6B7280">😢 Buồn mệt</button>
+                  <button class="mood-btn" data-mood="Tức giận / Bức xúc" data-color="#EF4444">😡 Tức giận</button>
+                </div>
+                <div id="moodFeedback" class="mood-feedback-box hidden"></div>
+              </div>
+            </div>
+
+            <!-- CHẠM 2 -->
+            <div class="cham-card" id="chamCard2">
+              <div class="cham-badge">CHẠM 2</div>
+              <h3>Điều Hòa: 3 Phút Tĩnh Tâm</h3>
+              <p class="cham-desc">Làm dịu căng thẳng, hạ nhịp tim bằng phương pháp thở 4-7-8 khoa học.</p>
+              
+              <div class="breath-box">
+                <div class="breath-circle" id="breathCircle">
+                  <span id="breathInstruction">Sẵn sàng</span>
+                </div>
+                <div class="breath-controls">
+                  <button class="btn-primary-sm" id="startBreathBtn">Bắt đầu thở 4-7-8</button>
+                  <span class="timer-tag" id="breathTimer">00:00</span>
+                </div>
+              </div>
+            </div>
+
+            <!-- CHẠM 3 -->
+            <div class="cham-card" id="chamCard3">
+              <div class="cham-badge">CHẠM 3</div>
+              <h3>Hiểu Bạn: Thấu Cảm</h3>
+              <p class="cham-desc">Đặt mình vào vị trí của bạn bè, cha mẹ để hiểu nguyên nhân sau hành động.</p>
+              
+              <div class="interactive-tool">
+                <p class="tool-prompt">Nếu bạn đang có khúc mắc với ai đó, hãy chọn tình huống:</p>
+                <select id="empathyScenarioSelect">
+                  <option value="friend-silent">Bạn thân đột nhiên im lặng, không nói chuyện</option>
+                  <option value="parent-nag">Bố mẹ nhắc nhở chuyện học tập nhiều lần</option>
+                  <option value="team-conflict">Bất đồng ý kiến khi làm bài tập nhóm</option>
+                  <option value="online-rumor">Nghe thấy lời đồn không hay về mình</option>
+                </select>
+                <button class="btn-secondary-sm" id="btnExploreEmpathy">Khám phá góc nhìn thấu cảm ➔</button>
+                <div id="empathyResult" class="empathy-result-box hidden"></div>
+              </div>
+            </div>
+
+            <!-- CHẠM 4 -->
+            <div class="cham-card" id="chamCard4">
+              <div class="cham-badge">CHẠM 4</div>
+              <h3>Cùng Làm: Giao Tiếp Tích Cực</h3>
+              <p class="cham-desc">Công thức giao tiếp phi bạo lực: Quan sát - Cảm xúc - Nhu cầu - Đề nghị.</p>
+              
+              <div class="formula-box">
+                <div class="formula-step"><span>1. Quan sát:</span> "Khi bạn..."</div>
+                <div class="formula-step"><span>2. Cảm xúc:</span> "Mình cảm thấy..."</div>
+                <div class="formula-step"><span>3. Nhu cầu:</span> "Vì mình cần..."</div>
+                <div class="formula-step"><span>4. Đề nghị:</span> "Liệu chúng mình có thể..."</div>
+                <button class="btn-secondary-sm" id="btnTryFormula">Tập ghép câu giao tiếp ➔</button>
+              </div>
+            </div>
+
+            <!-- CHẠM 5 -->
+            <div class="cham-card" id="chamCard5">
+              <div class="cham-badge">CHẠM 5</div>
+              <h3>Chọn Đúng: Ra Quyết Định</h3>
+              <p class="cham-desc">Cân nhắc hậu quả trước khi hành động: An toàn - Trách nhiệm - Tự hào.</p>
+              
+              <div class="decision-tool">
+                <p class="tool-prompt">3 Câu hỏi tự vấn trước khi hành động:</p>
+                <ul class="decision-checklist">
+                  <li>Lựa chọn này có an toàn cho mình và người khác không?</li>
+                  <li>Nếu ai cũng làm như vậy, điều gì sẽ xảy ra?</li>
+                  <li>Một tháng sau nhìn lại, mình có tự hào về việc này không?</li>
+                </ul>
+                <button class="btn-primary-sm" id="btnOpenDecisionChat">Tự vấn một quyết định cùng Hiệp Sĩ ➔</button>
+              </div>
+            </div>
           </div>
         </div>
+      </section>
 
-        <!-- Textarea & Send / Stop Buttons -->
-        <div class="composer-box">
-          <textarea
-            id="chatInputTextarea"
-            class="chat-textarea"
-            rows="1"
-            placeholder="Nhập câu hỏi bài tập, bấm [∑ Công thức Toán], đính kèm [📷 Ảnh bài tập] hoặc chia sẻ tâm sự 5 CHẠM... (Enter để gửi, Shift+Enter xuống dòng)"
-          ></textarea>
-          <button id="btnStopGenerating" class="btn-stop" title="Dừng phản hồi hiện tại">
-            ⏹ Dừng
-          </button>
-          <button id="btnSendMessage" class="btn-send" title="Gửi câu hỏi cho Hiệp sĩ Tự vấn">
-            Gửi ➤
-          </button>
+      <!-- View: 100 Prompts -->
+      <section class="tab-view" id="prompts-tab">
+        <div class="prompts-container">
+          <div class="section-hero">
+            <h2>📖 Cẩm Nang 100 Prompt Socratic 5 CHẠM</h2>
+            <p>Tuyển tập câu lệnh chuẩn mực giúp học sinh tự tư duy, phân loại theo môn học và khối lớp.</p>
+          </div>
+
+          <div class="prompt-filter-bar">
+            <button class="filter-chip active" data-subject="all">Tất cả (100)</button>
+            <button class="filter-chip" data-subject="math">📐 Toán học</button>
+            <button class="filter-chip" data-subject="literature">📝 Ngữ văn</button>
+            <button class="filter-chip" data-subject="science">🔬 KHTN</button>
+            <button class="filter-chip" data-subject="english">🌐 Tiếng Anh</button>
+            <button class="filter-chip" data-subject="sel">🌿 Cảm xúc & SEL</button>
+          </div>
+
+          <div class="prompts-grid" id="promptsGrid">
+            <!-- Rendered by app.js -->
+          </div>
         </div>
-      </footer>
+      </section>
+
+      <!-- View: Honor Code -->
+      <section class="tab-view" id="honor-tab">
+        <div class="honor-container">
+          <div class="section-hero">
+            <h2>🏅 Cam Kết Danh Dự Học Sinh (Honor Code)</h2>
+            <p>Học sinh trường THCS xã Lùng Phình: Trung thực trong học tập – Tự lập trong tư duy.</p>
+          </div>
+
+          <div class="honor-card">
+            <h3>5 Lời Hứa Danh Dự Của Người Học Trưởng Thành</h3>
+            <div class="honor-list">
+              <div class="honor-item">
+                <span class="honor-num">1</span>
+                <div>
+                  <strong>Tôi không dùng AI để chép bài làm hộ</strong>
+                  <p>Tôi hiểu rằng việc chép nguyên văn lời giải của AI là tự tước đi cơ hội rèn luyện não bộ của chính mình.</p>
+                </div>
+              </div>
+              <div class="honor-item">
+                <span class="honor-num">2</span>
+                <div>
+                  <strong>Tôi luôn kiểm chứng lại với Sách giáo khoa</strong>
+                  <p>AI có thể nhầm lẫn hoặc bịa đặt. Thầy Cô và Sách giáo khoa luôn là chuẩn mực cao nhất.</p>
+                </div>
+              </div>
+              <div class="honor-item">
+                <span class="honor-num">3</span>
+                <div>
+                  <strong>Tôi bảo vệ thông tin cá nhân và bạn bè</strong>
+                  <p>Không bao giờ gửi họ tên đầy đủ, số điện thoại, mật khẩu hoặc chuyện riêng tư nhạy cảm lên AI.</p>
+                </div>
+              </div>
+              <div class="honor-item">
+                <span class="honor-num">4</span>
+                <div>
+                  <strong>Tôi dũng cảm tự làm từng bước</strong>
+                  <p>Sai sót trong quá trình tự làm là bước đệm cần thiết để học tốt hơn.</p>
+                </div>
+              </div>
+              <div class="honor-item">
+                <span class="honor-num">5</span>
+                <div>
+                  <strong>Tôi lan tỏa tinh thần học tập tích cực</strong>
+                  <p>Hướng dẫn bạn cùng lớp sử dụng AI đúng cách, không tiếp tay cho gian lận điểm số.</p>
+                </div>
+              </div>
+            </div>
+            
+            <div class="honor-action">
+              <button class="btn-primary" id="signHonorBtn">✍️ Em Xin Cam Kết Thực Hiện Danh Dự</button>
+              <div id="honorSignedBadge" class="honor-badge-signed hidden">
+                ✓ Bạn đã ký cam kết danh dự thành công! Hãy luôn là một học sinh trung thực và tự lập.
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- View: SOS Hotline -->
+      <section class="tab-view" id="sos-tab">
+        <div class="sos-container">
+          <div class="section-hero sos-hero">
+            <h2>🆘 Kênh Trợ Giúp Khẩn Cấp & An Toàn Học Đường</h2>
+            <p>Nếu bạn hoặc bạn bè đang gặp nguy hiểm, bạo lực học đường hay khủng hoảng tinh thần, hãy liên hệ ngay!</p>
+          </div>
+
+          <div class="hotline-grid">
+            <div class="hotline-card featured">
+              <div class="card-icon">📞</div>
+              <span class="hotline-number">111</span>
+              <h4>Tổng Đài Quốc Gia Bảo Vệ Trẻ Em</h4>
+              <p class="phone-desc">Gọi MIỄN PHÍ 24/7 từ mọi điện thoại. Luôn lắng nghe, bảo mật và can thiệp kịp thời.</p>
+              <a href="tel:111" class="btn-call">Gọi 111 Ngay</a>
+            </div>
+
+            <div class="hotline-card">
+              <div class="card-icon">🏫</div>
+              <span class="hotline-number">THCS Lùng Phình</span>
+              <h4>Phòng Tư Vấn Học Đường Trường</h4>
+              <p class="phone-desc">Gặp trực tiếp Thầy Hiệu phó hoặc Cô Tổng phụ trách Đội vào giờ ra chơi các ngày học.</p>
+            </div>
+
+            <div class="hotline-card">
+              <div class="card-icon">🚑</div>
+              <span class="hotline-number">115</span>
+              <h4>Cấp Cứu Y Tế</h4>
+              <p class="phone-desc">Khi xảy ra tai nạn thương tích hoặc tình huống sức khỏe khẩn cấp.</p>
+              <a href="tel:115" class="btn-call secondary">Gọi 115</a>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- View: About & Privacy -->
+      <section class="tab-view" id="about-tab">
+        <div class="about-container">
+          <div class="section-hero">
+            <h2>ℹ️ Về Dự Án DreamSpeak-SEL</h2>
+            <p>Sáng kiến ứng dụng Trí tuệ Nhân tạo Socratic và Rèn luyện Kỹ năng Cảm xúc – Xã hội.</p>
+          </div>
+
+          <div class="about-content">
+            <div class="about-block">
+              <h3>🎯 Mục Tiêu Dự Án</h3>
+              <p>DreamSpeak-SEL ra đời nhằm giải quyết vấn đề học sinh lạm dụng AI để chép bài làm hộ, đồng thời mang đến một không gian an toàn để học sinh THCS rèn luyện 5 năng lực cảm xúc - xã hội (CASEL): Tự nhận thức, Quản lý cảm xúc, Nhận thức xã hội, Kỹ năng quan hệ và Ra quyết định có trách nhiệm.</p>
+            </div>
+
+            <div class="about-block">
+              <h3>🔒 Quyền Riêng Tư & An Toàn</h3>
+              <p>• Hệ thống cho phép truy cập hoàn toàn ẩn danh, không thu thập họ tên, email hay số điện thoại của học sinh.<br>
+              • Bộ lọc PII tự động cảnh báo khi học sinh vô tình nhập số điện thoại hoặc mật khẩu.<br>
+              • Dữ liệu cuộc trò chuyện chỉ lưu tạm thời trên trình duyệt của máy bạn đang ngồi và có thể xóa sạch bất kỳ lúc nào bằng nút <strong>"Xóa hội thoại"</strong>.</p>
+            </div>
+          </div>
+        </div>
+      </section>
     </main>
   </div>
 
-  <!-- Modal 1: Chia sẻ Công khai & Mã QR -->
-  <div class="modal-backdrop" id="modalShare">
+  <!-- Modal: System Info & AI Status -->
+  <div class="modal-overlay hidden" id="settingsModal">
     <div class="modal-card">
       <div class="modal-header">
-        <h3>📲 Chia sẻ DREAMSPEAK-SEL (Truy cập Công khai Không cần Đăng nhập)</h3>
-        <button class="btn-icon" data-close-modal="modalShare">✕</button>
+        <h3>⚙️ Thông Tin Hệ Thống & Trạng Thái AI</h3>
+        <button class="modal-close" id="closeSettingsModal">✕</button>
       </div>
-      <p style="font-size:0.86rem; color:var(--text-secondary);">
-        Mọi học sinh và giáo viên đều có thể quét mã QR hoặc mở đường link dưới đây trực tiếp trên điện thoại (Android, iPhone) và máy tính <strong>mà không cần tạo tài khoản hay đăng nhập</strong>:
-      </p>
+      <div class="modal-body">
+        <div class="form-group">
+          <label>Trạng thái Máy Chủ Backend:</label>
+          <div style="padding: 10px; background:#f1f5f9; border-radius:8px; font-size:0.88rem;">
+            <div>• Trạng thái: <strong id="modalBackendStatus" style="color:#10b981;">Đang kết nối...</strong></div>
+            <div>• Nhà cung cấp AI: <strong id="modalAiProvider">Google Gemini API / Socratic Engine</strong></div>
+            <div>• Mô hình: <strong id="modalAiModel">gemini-1.5-flash</strong></div>
+            <div>• Truy cập công khai: <strong>24/7 Không cần đăng nhập</strong></div>
+          </div>
+        </div>
 
-      <div class="qr-container">
-        <img id="shareQrImage" src="" alt="Mã QR truy cập DREAMSPEAK-SEL" />
-        <div style="font-size:0.78rem; color:var(--text-muted); margin-top:0.45rem;">
-          Quét mã QR bằng Camera điện thoại hoặc Zalo để mở ngay
+        <div class="form-group">
+          <label>Khối lớp học tập:</label>
+          <select id="studentGradeSelect">
+            <option value="6">Khối 6 (Lớp 6)</option>
+            <option value="7" selected>Khối 7 (Lớp 7)</option>
+            <option value="8">Khối 8 (Lớp 8)</option>
+            <option value="9">Khối 9 (Lớp 9)</option>
+          </select>
+        </div>
+
+        <div style="background:#fffbeb; border:1px solid #fde68a; border-radius:8px; padding:10px 14px; font-size:0.82rem; color:#b45309;">
+          🛡️ <strong>Bảo Mật Máy Chủ:</strong> Khóa API Google Gemini được lưu trữ an toàn trong biến môi trường máy chủ (file <code>.env</code> hoặc Cloud Secrets). Trình duyệt của học sinh không lưu trữ API Key để đảm bảo an toàn tuyệt đối chi phí và chống rò rỉ khóa.
         </div>
       </div>
-
-      <div class="share-url-box">
-        <input type="text" id="sharePublicUrlInput" class="share-url-input" readonly />
-        <button id="btnCopyShareUrl" class="btn-icon btn-primary-pill">📋 Sao chép Link</button>
-      </div>
-
-      <div style="display:flex; gap:0.5rem; flex-wrap:wrap; justify-content:center; margin-top:0.85rem;">
-        <button id="btnDownloadQr" class="btn-icon">⬇️ Tải ảnh Mã QR</button>
-        <button id="btnShareZalo" class="btn-icon" style="border-color:#0068ff; color:#0068ff;">💬 Chia sẻ qua Zalo</button>
-        <button id="btnShareFacebook" class="btn-icon" style="border-color:#1877f2; color:#1877f2;">📘 Chia sẻ Facebook</button>
+      <div class="modal-footer">
+        <button class="btn-primary" id="cancelSettingsBtn">Đóng</button>
       </div>
     </div>
   </div>
 
-  <!-- Modal 2: Giới thiệu, Hướng dẫn & Chính sách An toàn Học sinh -->
-  <div class="modal-backdrop" id="modalGuide">
-    <div class="modal-card">
-      <div class="modal-header">
-        <h3>🛡️ Giới thiệu DREAMSPEAK-SEL &amp; Cam kết Bảo vệ Học sinh</h3>
-        <button class="btn-icon" data-close-modal="modalGuide">✕</button>
+  <!-- Modal: Urgent Crisis Interception -->
+  <div class="modal-overlay hidden" id="crisisModal">
+    <div class="modal-card crisis-card">
+      <div class="modal-header crisis-header">
+        <span class="crisis-icon">⚠️</span>
+        <h3>Hiệp Sĩ Luôn Ở Bên Bạn!</h3>
       </div>
-      <div style="font-size:0.86rem; display:flex; flex-direction:column; gap:0.75rem;">
-        <div>
-          <strong style="color:var(--primary);">1. Triết lý nghiên cứu (Đề tài NCKH 26-27):</strong>
-          <p><strong>DREAMSPEAK-SEL – HIỆP SĨ TỰ VẤN 24/7</strong> là trợ lý AI giáo dục kết hợp giữa <em>Phương pháp Sư phạm Gợi mở (Socratic)</em> và <em>Mô hình Giáo dục Cảm xúc – Xã hội 5 CHẠM</em> (Chạm mình – Điều hòa – Hiểu bạn – Cùng làm – Chọn đúng).</p>
+      <div class="modal-body">
+        <p class="crisis-text">Hiệp sĩ nhận thấy bạn đang trải qua những cảm xúc rất nặng nề và đau lòng. Bạn là một con người quý giá và xứng đáng được yêu thương, lắng nghe.</p>
+        <div class="crisis-callout">
+          <strong>Xin hãy chia sẻ ngay với người có thể giúp đỡ bạn:</strong>
+          <p>📞 <strong>Tổng đài Quốc gia Bảo vệ Trẻ em:</strong> <span class="hotline-badge">111</span> (Gọi hoàn toàn miễn phí 24/7)</p>
+          <p>🏫 <strong>Thầy/Cô tư vấn tâm lý:</strong> Thầy Hiệu phó & Cô Tổng phụ trách Đội luôn lắng nghe bạn!</p>
         </div>
-        <div>
-          <strong style="color:var(--primary);">2. Hướng dẫn sử dụng hiệu quả:</strong>
-          <ul style="margin-left:1.2rem; margin-top:0.25rem;">
-            <li><strong>Hỏi bài tập các môn (Lớp 6 – 12):</strong> Chọn khối lớp, môn học, bấm <strong>∑ Công thức Toán</strong> hoặc <strong>📷 Tải ảnh bài tập</strong> để AI hướng dẫn từng bước.</li>
-            <li><strong>Khi chưa hiểu:</strong> Bấm nút <em>"💡 Giải thích đơn giản hơn"</em> ngay dưới câu trả lời của AI.</li>
-            <li><strong>Tư vấn tâm lý &amp; kỹ năng SEL:</strong> Chọn 1 trong <strong>5 nội dung CHẠM</strong> hoặc <strong>9 tình huống thực tế</strong> ở thanh bên trái.</li>
-          </ul>
-        </div>
-        <div style="background:var(--bg-muted); padding:0.75rem; border-radius:8px; border-left:4px solid var(--success);">
-          <strong>🔒 Chính sách Quyền riêng tư &amp; Bảo vệ Trẻ vị thành niên:</strong>
-          <ul style="margin-left:1.2rem; margin-top:0.25rem;">
-            <li>Không yêu cầu đăng nhập, không thu thập họ tên, số điện thoại hay địa chỉ của học sinh.</li>
-            <li>Không công khai nội dung trò chuyện và không lưu trữ hình ảnh cá nhân của học sinh.</li>
-            <li>AI đóng vai trò người bạn đồng hành, không thay thế thầy cô giáo, cha mẹ hoặc chuyên gia tâm lý. Khi cần hỗ trợ khẩn cấp, hãy liên hệ Thầy/Cô chủ nhiệm hoặc Tổng đài Quốc gia Bảo vệ Trẻ em <strong>111</strong> (miễn phí 24/7).</li>
-          </ul>
-        </div>
+        <p class="crisis-subtext">Hiệp sĩ là trí tuệ nhân tạo và không thể thay thế vòng tay ấm áp của thầy cô và gia đình. Hãy tìm một người bạn tin tưởng để nói chuyện ngay bây giờ nhé!</p>
+      </div>
+      <div class="modal-footer">
+        <button class="btn-primary" id="ackCrisisBtn">Em đã hiểu, cảm ơn Hiệp sĩ</button>
       </div>
     </div>
   </div>
 
-  <script src="/js/mathToolbar.js"></script>
-  <script src="/js/app.js"></script>
+  <!-- Modal: Share Publicly (Web Share API, QR Code, Zalo, FB, Copy Link) -->
+  <div class="modal-overlay hidden" id="shareModal">
+    <div class="modal-card share-card">
+      <div class="modal-header share-header">
+        <div class="share-header-left">
+          <span class="share-icon">📲</span>
+          <div>
+            <h3>Chia Sẻ DreamSpeak-SEL Cho Học Sinh</h3>
+            <span class="sub-badge">Quét mã dùng ngay 24/7 • Không cần tài khoản</span>
+          </div>
+        </div>
+        <button class="modal-close" id="closeShareModal">✕</button>
+      </div>
+      <div class="modal-body share-body">
+        <!-- Social Sharing Grid -->
+        <div class="share-social-grid">
+          <button type="button" class="btn-share-social btn-share-native" id="btnNativeWebShare" title="Chia sẻ trực tiếp qua điện thoại">
+            <span>📲</span> Chia Sẻ Ngay
+          </button>
+          <a href="#" target="_blank" class="btn-share-social btn-share-zalo" id="btnShareZalo" title="Chia sẻ lên Zalo">
+            <span>💬</span> Zalo
+          </a>
+          <a href="#" target="_blank" class="btn-share-social btn-share-fb" id="btnShareFb" title="Chia sẻ lên Facebook">
+            <span>🌐</span> Facebook
+          </a>
+        </div>
+
+        <div class="qr-display-box">
+          <div id="qrcodeContainer" class="qrcode-wrapper">
+            <!-- QR Canvas generated dynamically -->
+          </div>
+          <div class="qr-info-meta">
+            <span class="qr-badge" id="qrTargetBadge">🛡️ Truy Cập Trực Tuyến 24/7</span>
+            <p id="qrScanPrompt">Dùng Camera hoặc Zalo trên điện thoại quét mã để trò chuyện cùng Hiệp Sĩ ngay!</p>
+          </div>
+        </div>
+
+        <div class="share-link-group">
+          <label for="shareLinkInput">Đường dẫn truy cập trực tiếp:</label>
+          <div class="link-copy-row">
+            <input type="text" id="shareLinkInput" value="http://localhost:8080" readonly>
+            <button type="button" class="btn-primary" id="copyShareLinkBtn">📋 Sao Chép</button>
+            <button type="button" class="btn-secondary" id="testShareLinkBtn" title="Mở thử nghiệm trên tab mới">🔗 Mở Thử</button>
+          </div>
+          <span id="copySuccessMsg" class="copy-success-text hidden">✓ Đã sao chép liên kết vào bộ nhớ tạm!</span>
+        </div>
+
+        <div class="share-print-actions">
+          <button type="button" class="btn-secondary" id="downloadQrBtn">📥 Tải Ảnh Mã QR Để In</button>
+          <button type="button" class="btn-secondary" id="printQrPosterBtn">🖨️ In Áp Phích Dán Bảng Tin</button>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn-primary" id="closeShareModalFooter">Hoàn tất</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal: Google Gemini AI Guide & Status -->
+  <div class="modal-overlay hidden" id="aiSetupModal">
+    <div class="modal-card">
+      <div class="modal-header">
+        <div style="display:flex; align-items:center; gap:8px;">
+          <span style="font-size:1.4rem;">🤖</span>
+          <h3>Trí Tuệ Nhân Tạo (Google Gemini AI)</h3>
+        </div>
+        <button class="modal-close" id="closeAiModal">✕</button>
+      </div>
+      <div class="modal-body">
+        <div id="aiServerStatusInfo" style="margin-bottom:14px; padding:12px; background:#f0fdf4; border:1px solid #bbf7d0; border-radius:8px;">
+          <div style="font-weight:700; color:#166534; margin-bottom:4px;" id="aiStatusHeadline">⚡ Trạng thái: Đang kiểm tra...</div>
+          <div style="font-size:0.85rem; color:#15803d;" id="aiStatusDetail">Đang lấy dữ liệu từ máy chủ backend...</div>
+        </div>
+
+        <div class="server-broadcast-guide">
+          <strong>🔑 Hướng dẫn cấu hình API Key Google Gemini (Dành cho Quản trị viên):</strong>
+          <ol style="font-size:0.84rem; line-height:1.6; margin-top:6px; padding-left:18px;">
+            <li>Truy cập <a href="https://aistudio.google.com/app/apikey" target="_blank" style="color:var(--primary); font-weight:700;">Google AI Studio</a> và tạo khóa API miễn phí (chỉ mất 1 phút).</li>
+            <li>Mở file <code>.env</code> trên máy chủ và dán khóa vào: <code>GEMINI_API_KEY=YOUR_API_KEY_HERE</code></li>
+            <li>Khởi động lại máy chủ. Hệ thống sẽ tự động kích hoạt Gemini AI mà không lo rò rỉ khóa ra ngoài trình duyệt học sinh!</li>
+          </ol>
+        </div>
+      </div>
+      <div class="modal-footer" style="justify-content: space-between;">
+        <button type="button" class="btn-secondary" id="btnTestAiConnection">⚡ Kiểm Tra Lại Máy Chủ</button>
+        <button type="button" class="btn-primary" id="btnAckAiModal">Đã Hiểu</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- QR Code Library (Offline-Ready) & Main App Logic -->
+  <script src="qrcode.min.js"></script>
+  <script src="app.js"></script>
 </body>
 </html>
