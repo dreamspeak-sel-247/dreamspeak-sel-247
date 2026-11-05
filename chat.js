@@ -41,6 +41,7 @@ async function handleChat(req, res, clientIp, sessionId) {
   });
 
   req.on('end', async () => {
+    const requestStartTime = Date.now();
     try {
       const payload = JSON.parse(rawBody || '{}');
       const message = String(payload.message || '').trim();
@@ -49,6 +50,26 @@ async function handleChat(req, res, clientIp, sessionId) {
       const subject = String(payload.subject || '');
       const history = Array.isArray(payload.history) ? payload.history : [];
       const isStreaming = Boolean(payload.stream);
+
+      const selPillar = String(payload.selPillar || 'general');
+      const pedagogyMode = String(payload.pedagogyMode || 'socratic');
+      const extractedImageText = String(payload.extractedImageText || '');
+
+      // Map grade "Lớp 9" → "9"
+      const gradeNum = grade.replace(/[^0-9]/g, '') || grade;
+
+      // Map selPillar → mode
+      function pillarToMode(pillar, defaultMode) {
+        const map = {
+          'cham-minh': 'emotion',
+          'dieu-hoa': 'emotion',
+          'hieu-ban': 'relationship',
+          'cung-lam': 'relationship',
+          'chon-dung': 'decision'
+        };
+        return map[pillar] || defaultMode;
+      }
+      const effectiveMode = pillarToMode(selPillar, mode);
 
       // 3. Xác thực đầu vào
       if (!message) {
@@ -71,7 +92,7 @@ async function handleChat(req, res, clientIp, sessionId) {
       }
 
       // 5. Kiểm tra Khủng hoảng tâm lý (Crisis Interception)
-      if (checkCrisis(message)) {
+      if (checkCrisis(message, effectiveMode)) {
         const crisisHtml = getCrisisResponse();
         res.writeHead(200, { 'Content-Type': 'application/json; charset=utf-8' });
         return res.end(JSON.stringify({
@@ -84,7 +105,18 @@ async function handleChat(req, res, clientIp, sessionId) {
       }
 
       // 6. Xử lý phản hồi từ Gemini hoặc Local Socratic Engine
-      const systemPrompt = getSystemPrompt(mode, grade);
+      // Truyền môn học + kiểu giải thích em đang chọn thẳng vào prompt (giá trị pedagogyMode mặc định 'socratic'
+      // dùng hành vi chuẩn; chỉ khi em chọn "giải thích đơn giản" hoặc "từng bước" mới thêm ghi chú riêng)
+      const pm = pedagogyMode.toLowerCase();
+      const style = /simple|explain|example|don-gian|giai-thich|đơn giản|giải thích/.test(pm) ? 'simple'
+                  : /step|goi-mo-tung|từng bước/.test(pm) ? 'step' : '';
+      const systemPrompt = getSystemPrompt(effectiveMode, gradeNum, subject, style);
+
+      // Nếu giao diện đã đọc chữ từ ảnh đề bài (extractedImageText) thì đưa cho AI, trước đây trường này bị bỏ quên
+      const imageText = extractedImageText.trim().slice(0, 1500);
+      const aiMessage = imageText
+        ? `${message}\n\n[Nội dung chữ đọc được từ ảnh đề bài em đã tải lên: ${imageText}]`
+        : message;
 
       // Chế độ STREAMING (SSE)
       if (isStreaming) {
@@ -100,28 +132,39 @@ async function handleChat(req, res, clientIp, sessionId) {
         }
 
         if (geminiService.isConfigured()) {
+          let streamedAny = false;
           try {
-            await geminiService.streamGenerateContent(
+            const fullText = await geminiService.streamGenerateContent(
               systemPrompt,
-              message,
+              aiMessage,
               history,
               [],
               (delta) => {
+                streamedAny = true;
                 res.write(`data: ${JSON.stringify({ delta })}\n\n`);
               }
             );
+            // AI trả về rỗng (ví dụ bị bộ lọc an toàn chặn) → coi như lỗi để dùng dự phòng
+            if (!streamedAny && !String(fullText || '').trim()) {
+              throw new Error('AI trả về nội dung rỗng');
+            }
             res.write(`data: [DONE]\n\n`);
             return res.end();
           } catch (err) {
             console.warn('[Stream Fallback] Lỗi stream Gemini:', err.message);
-            const fallbackText = geminiService.generateLocalSocraticResponse(message, mode, grade, subject);
-            res.write(`data: ${JSON.stringify({ delta: fallbackText })}\n\n`);
+            if (streamedAny) {
+              // Đã gửi một phần câu trả lời thật → không nối thêm mẫu dự phòng vào giữa chừng
+              res.write(`data: ${JSON.stringify({ delta: '\n\n_(Kết nối bị gián đoạn giữa chừng. Em hãy gửi lại câu hỏi để Hiệp Sĩ trả lời đầy đủ nhé!)_' })}\n\n`);
+            } else {
+              const fallbackText = geminiService.generateLocalSocraticResponse(message, effectiveMode, gradeNum, subject);
+              res.write(`data: ${JSON.stringify({ delta: fallbackText })}\n\n`);
+            }
             res.write(`data: [DONE]\n\n`);
             return res.end();
           }
         } else {
           // Chưa cấu hình key: Fallback mượt mà
-          const fallbackText = geminiService.generateLocalSocraticResponse(message, mode, grade, subject);
+          const fallbackText = geminiService.generateLocalSocraticResponse(message, effectiveMode, gradeNum, subject);
           // Gửi mô phỏng chunk mượt mà
           res.write(`data: ${JSON.stringify({ delta: fallbackText })}\n\n`);
           res.write(`data: [DONE]\n\n`);
@@ -135,15 +178,15 @@ async function handleChat(req, res, clientIp, sessionId) {
 
       if (geminiService.isConfigured()) {
         try {
-          replyText = await geminiService.generateContent(systemPrompt, message, history);
+          replyText = await geminiService.generateContent(systemPrompt, aiMessage, history);
           provider = 'gemini';
         } catch (err) {
           console.warn('[API Fallback] Gemini thất bại, kích hoạt Local Socratic:', err.message);
-          replyText = geminiService.generateLocalSocraticResponse(message, mode, grade, subject);
+          replyText = geminiService.generateLocalSocraticResponse(message, effectiveMode, gradeNum, subject);
           provider = 'socratic-fallback';
         }
       } else {
-        replyText = geminiService.generateLocalSocraticResponse(message, mode, grade, subject);
+        replyText = geminiService.generateLocalSocraticResponse(message, effectiveMode, gradeNum, subject);
         provider = 'socratic-offline';
       }
 
@@ -157,8 +200,20 @@ async function handleChat(req, res, clientIp, sessionId) {
         response: replyText,
         reply: replyText,
         provider,
-        mode,
-        model: provider === 'gemini' ? geminiService.model : 'socratic-engine'
+        mode: effectiveMode,
+        model: provider === 'gemini' ? geminiService.model : 'socratic-engine',
+        metadata: {
+          provider: provider === 'gemini' ? 'DREAMSPEAK-SEL Gemini AI' : 'DREAMSPEAK-SEL Fast Socratic AI',
+          model: provider === 'gemini' ? geminiService.model : 'gpt-oss-20b-socratic',
+          detectedCategory: effectiveMode,
+          activeSelPillar: selPillar,
+          pedagogyMode: pedagogyMode,
+          grade: grade,
+          subject: subject,
+          isCrisisAlert: false,
+          latencyMs: Date.now() - requestStartTime,
+          suggestedFollowUps: []
+        }
       }));
 
     } catch (err) {
@@ -198,7 +253,7 @@ async function handleChatImage(req, res, clientIp, sessionId) {
   req.on('end', async () => {
     try {
       const payload = JSON.parse(rawBody || '{}');
-      const { imageBase64, mimeType, message, mode, grade, history } = payload;
+      const { imageBase64, mimeType, message, mode, grade, subject, history } = payload;
 
       if (!imageBase64) {
         return sendJsonError(res, 400, 'NO_IMAGE', 'Chưa có dữ liệu hình ảnh được gửi lên.');
@@ -212,13 +267,13 @@ async function handleChatImage(req, res, clientIp, sessionId) {
       // Làm sạch Base64 nếu có data URL prefix
       const cleanBase64 = imageBase64.replace(/^data:image\/[a-zA-Z]+;base64,/, '');
 
-      const systemPrompt = getSystemPrompt(mode || 'study', grade || '7') + `
-\n[NHIỆM VỤ ĐẶC BIỆT KHI XEM ẢNH BÀI TẬP]:
-- Bạn đang phân tích một hình ảnh bài tập do học sinh THCS tải lên (có thể là hình vẽ hình học, đồ thị hàm số, biểu đồ, bảng số liệu, hoặc chữ viết tay).
-- Hãy đọc kỹ văn bản, các số liệu và ký hiệu trong ảnh.
-- Nêu rõ đề bài trong ảnh đang yêu cầu điều gì.
-- KHÔNG GIẢI TOÀN BỘ BÀI TẬP NGAY LẬP TỨC!
-- Hãy trích xuất dữ kiện từ ảnh, gợi ý công thức và đặt 1 câu hỏi gợi mở để học sinh tự làm bước đầu tiên.
+      const gradeNumImg = String(grade || '7').replace(/[^0-9]/g, '') || '7';
+      const systemPrompt = getSystemPrompt(mode || 'study', gradeNumImg, String(subject || '')) + `
+
+## KHI EM GỬI ẢNH BÀI TẬP
+- Đọc kỹ chữ, số liệu, ký hiệu và hình vẽ trong ảnh (có thể là chữ viết tay, hình học, đồ thị, bảng số liệu).
+- Mở đầu bằng 1-2 câu nói lại ngắn gọn nội dung Hiệp Sĩ đọc được để em kiểm tra đọc có đúng không. Chỗ nào mờ hoặc thiếu dữ kiện thì hỏi lại đúng chỗ đó, không đoán số.
+- Sau đó áp dụng đúng các tình huống ở trên: nếu là ĐỀ MỚI thì gợi ý một bước đầu gắn với số liệu trong ảnh; nếu là BÀI EM ĐÃ LÀM thì kiểm tra bài làm và nhận xét đúng chỗ; nếu em kèm câu hỏi riêng thì trả lời câu hỏi đó trước.
 `;
 
       const inlineImages = [{
