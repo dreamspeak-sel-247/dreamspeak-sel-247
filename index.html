@@ -12,7 +12,8 @@
   <!-- KaTeX: Thư viện hiển thị công thức Toán học chuẩn quốc tế -->
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
   <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
-  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"></script>
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"
+    onload="window.renderKaTeX = function(el) { if (window.renderMathInElement) { renderMathInElement(el || document.body, { delimiters: [{left: '$$', right: '$$', display: true}, {left: '$', right: '$', display: false}, {left: '\\(', right: '\\)', display: false}, {left: '\\[', right: '\\]', display: true}], throwOnError: false }); } }; window.renderKaTeX();"></script>
 </head>
 <body>
   <div class="app-container">
@@ -292,7 +293,7 @@
 
             <div class="input-actions-row">
               <div style="display:flex; align-items:center; gap:8px;">
-                <input type="file" id="imageFileInput" accept="image/png,image/jpeg,image/jpg,image/webp" capture="environment" style="display:none">
+                <input type="file" id="imageFileInput" accept="image/png,image/jpeg,image/jpg,image/webp" style="display:none">
                 <button type="button" class="btn-attach-image" id="btnAttachImage" title="Tải ảnh đề bài hoặc chụp từ camera điện thoại">
                   <span>📷</span> <span>Gửi ảnh bài tập / Chụp ảnh</span>
                 </button>
@@ -306,7 +307,6 @@
                 id="userInput" 
                 rows="1" 
                 placeholder="Nhập câu hỏi, bài tập hoặc công thức Toán học (Nhấn Enter để gửi)..."
-                required
               ></textarea>
               <button type="submit" id="sendBtn" class="send-btn" title="Gửi câu hỏi cho Hiệp Sĩ">
                 <span>Gửi</span>
@@ -577,7 +577,7 @@
           <div style="padding: 10px; background:#f1f5f9; border-radius:8px; font-size:0.88rem;">
             <div>• Trạng thái: <strong id="modalBackendStatus" style="color:#10b981;">Đang kết nối...</strong></div>
             <div>• Nhà cung cấp AI: <strong id="modalAiProvider">Google Gemini API / Socratic Engine</strong></div>
-            <div>• Mô hình: <strong id="modalAiModel">gemini-1.5-flash</strong></div>
+            <div>• Mô hình: <strong id="modalAiModel">gemini-2.5-flash</strong></div>
             <div>• Truy cập công khai: <strong>24/7 Không cần đăng nhập</strong></div>
           </div>
         </div>
@@ -717,5 +717,26 @@
   <!-- QR Code Library (Offline-Ready) & Main App Logic -->
   <script src="qrcode.min.js"></script>
   <script src="app.js"></script>
+  <!-- Patch: Tự động hiển thị công thức Toán KaTeX trong tin nhắn mới & Giữ kết nối máy chủ Render -->
+  <script>
+    (function() {
+      document.addEventListener('DOMContentLoaded', function() {
+        const chatMessages = document.getElementById('chatMessages');
+        if (chatMessages && window.MutationObserver) {
+          const observer = new MutationObserver(function() {
+            if (typeof window.renderKaTeX === 'function') {
+              window.renderKaTeX(chatMessages);
+            }
+          });
+          observer.observe(chatMessages, { childList: true, subtree: true });
+        }
+
+        // Giữ máy chủ Render không bị ngủ đông khi học sinh đang mở trang
+        setInterval(function() {
+          fetch('/api/health', { method: 'GET' }).catch(function() {});
+        }, 10 * 60 * 1000);
+      });
+    })();
+  </script>
 </body>
 </html>

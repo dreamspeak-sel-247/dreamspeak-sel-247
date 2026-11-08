@@ -1,20 +1,29 @@
 /**
  * DreamSpeak-SEL: Hiệp Sĩ Tự Vấn 24/7 - Backend HTTP Server
  * Kiến trúc mô-đun hóa, Zero-dependency, sẵn sàng triển khai Cloud & Docker
+ * (Bản đã vá lỗi bảo mật Static Files, chuẩn hóa Model gemini-2.5-flash & Health Check)
  */
 
 const http = require('http');
 const fs = require('fs');
 const path = require('path');
-const url = require('url');
 
 const { aiConfig } = require('./config/aiConfig');
 const geminiService = require('./services/geminiService');
 const { handleChat, handleChatImage } = require('./routes/chat');
 const { sendJsonError } = require('./middleware/errorHandler');
 
-const PORT = aiConfig.port;
-const HOST = aiConfig.host;
+// Tự động nâng cấp nếu cấu hình cũ vẫn để model gemini-1.5-flash đã ngừng hỗ trợ
+if (geminiService && (geminiService.model === 'gemini-1.5-flash' || geminiService.model === 'gemini-1.5-pro')) {
+  geminiService.model = 'gemini-2.5-flash';
+}
+if (aiConfig && (aiConfig.defaultModel === 'gemini-1.5-flash' || aiConfig.model === 'gemini-1.5-flash')) {
+  aiConfig.defaultModel = 'gemini-2.5-flash';
+  aiConfig.model = 'gemini-2.5-flash';
+}
+
+const PORT = process.env.PORT || aiConfig.port || 8080;
+const HOST = aiConfig.host || '0.0.0.0';
 
 // Danh mục MIME types chuẩn
 const MIME_TYPES = {
@@ -32,23 +41,52 @@ const MIME_TYPES = {
   '.md': 'text/markdown; charset=utf-8'
 };
 
+// Danh sách tệp và thư mục hệ thống Backend không cho phép truy cập công khai
+const BLOCKED_PATHS = [
+  '/server.js',
+  '/package.json',
+  '/package-lock.json',
+  '/dockerfile',
+  '/render.yaml',
+  '/config/',
+  '/services/',
+  '/routes/',
+  '/middleware/',
+  '/node_modules/'
+];
+
 /**
- * Phục vụ tệp tĩnh an toàn
+ * Phục vụ tệp tĩnh an toàn (Chặn lộ mã nguồn Backend & Directory Traversal)
  */
 function serveStatic(req, res, pathname) {
   let safePath = pathname;
+  try {
+    safePath = decodeURIComponent(pathname);
+  } catch (err) {
+    res.writeHead(400, { 'Content-Type': 'text/plain; charset=utf-8' });
+    return res.end('400 - Đường dẫn URL không hợp lệ.');
+  }
+
   if (safePath === '/' || safePath === '') {
     safePath = '/index.html';
   }
 
-  // Chuẩn hóa đường dẫn và ngăn chặn Directory Traversal
-  const normalized = path.normalize(safePath).replace(/^(\.\.[\/\\])+/, '');
-  const filePath = path.join(__dirname, normalized);
+  const lowerPath = safePath.toLowerCase();
+  const isBlocked =
+    lowerPath.includes('.env') ||
+    lowerPath.includes('.git') ||
+    BLOCKED_PATHS.some(blocked => lowerPath === blocked || lowerPath.startsWith(blocked));
 
-  // Bảo vệ không cho phép truy cập ra ngoài hoặc đọc file cấu hình nhạy cảm (.env, Dockerfile, etc.)
-  if (!filePath.startsWith(__dirname) || safePath.includes('.env') || safePath.includes('.git')) {
+  if (isBlocked) {
     res.writeHead(403, { 'Content-Type': 'text/plain; charset=utf-8' });
-    return res.end('403 - Cấm truy cập tệp tin cấu hình nhạy cảm.');
+    return res.end('403 - Cấm truy cập tệp tin cấu hình và mã nguồn máy chủ.');
+  }
+
+  // Chuẩn hóa đường dẫn và ngăn chặn Directory Traversal
+  const filePath = path.resolve(__dirname, '.' + safePath);
+  if (!filePath.startsWith(__dirname + path.sep) && filePath !== path.join(__dirname, 'index.html')) {
+    res.writeHead(403, { 'Content-Type': 'text/plain; charset=utf-8' });
+    return res.end('403 - Cấm truy cập tệp tin ngoài phạm vi thư mục.');
   }
 
   fs.stat(filePath, (err, stats) => {
@@ -68,7 +106,17 @@ function serveStatic(req, res, pathname) {
       'X-Frame-Options': 'SAMEORIGIN'
     });
 
+    if (req.method === 'HEAD') {
+      return res.end();
+    }
+
     const stream = fs.createReadStream(filePath);
+    stream.on('error', () => {
+      if (!res.headersSent) {
+        res.writeHead(500, { 'Content-Type': 'text/plain; charset=utf-8' });
+      }
+      res.end('500 - Lỗi đọc tệp tĩnh.');
+    });
     stream.pipe(res);
   });
 }
@@ -79,7 +127,7 @@ function serveStatic(req, res, pathname) {
 const server = http.createServer((req, res) => {
   // Cấu hình CORS mở cho truy cập không cần đăng nhập
   res.setHeader('Access-Control-Allow-Origin', '*');
-  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
+  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, HEAD, OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With, X-Session-Id');
 
   if (req.method === 'OPTIONS') {
@@ -87,19 +135,26 @@ const server = http.createServer((req, res) => {
     return res.end();
   }
 
-  const parsedUrl = url.parse(req.url, true);
-  const pathname = parsedUrl.pathname;
+  let pathname = '/';
+  try {
+    const parsedUrl = new URL(req.url, `http://${req.headers.host || 'localhost'}`);
+    pathname = parsedUrl.pathname;
+  } catch (e) {
+    pathname = (req.url || '/').split('?')[0];
+  }
+
   const clientIp = req.headers['x-forwarded-for']?.split(',')[0].trim() || req.socket.remoteAddress || '127.0.0.1';
   const sessionId = req.headers['x-session-id'] || 'anon_' + clientIp;
 
-  // 1. ENDPOINT: GET /api/health
-  if (pathname === '/api/health' && req.method === 'GET') {
+  // 1. ENDPOINT: GET / HEAD /api/health
+  if (pathname === '/api/health' && (req.method === 'GET' || req.method === 'HEAD')) {
     const memory = process.memoryUsage();
     res.writeHead(200, { 'Content-Type': 'application/json; charset=utf-8' });
+    if (req.method === 'HEAD') return res.end();
     return res.end(JSON.stringify({
       status: 'ok',
       service: 'DreamSpeak-SEL Backend',
-      version: '2.5.0',
+      version: '2.5.1',
       nodeVersion: process.version,
       timestamp: new Date().toISOString(),
       uptimeSeconds: Math.floor(process.uptime()),
@@ -112,13 +167,14 @@ const server = http.createServer((req, res) => {
     }));
   }
 
-  // 2. ENDPOINT: GET /api/status
-  if (pathname === '/api/status' && req.method === 'GET') {
+  // 2. ENDPOINT: GET / HEAD /api/status
+  if (pathname === '/api/status' && (req.method === 'GET' || req.method === 'HEAD')) {
     res.writeHead(200, { 'Content-Type': 'application/json; charset=utf-8' });
+    if (req.method === 'HEAD') return res.end();
     return res.end(JSON.stringify({
       backend: 'online',
       service: 'DreamSpeak-SEL Hiệp Sĩ Tự Vấn 24/7',
-      version: '2.5.0',
+      version: '2.5.1',
       aiConfigured: geminiService.isConfigured(),
       activeProvider: geminiService.isConfigured() ? 'Google Gemini AI' : 'Socratic Internal Engine',
       model: geminiService.isConfigured() ? geminiService.model : 'socratic-offline',
@@ -177,7 +233,7 @@ const server = http.createServer((req, res) => {
 // Khởi chạy Server
 server.listen(PORT, HOST, () => {
   console.log('=================================================================');
-  console.log('   DREAMSPEAK-SEL: HIỆP SĨ TỰ VẤN 24/7 (BACKEND SERVER 2.5)     ');
+  console.log('   DREAMSPEAK-SEL: HIỆP SĨ TỰ VẤN 24/7 (BACKEND SERVER 2.5.1)   ');
   console.log('=================================================================');
   console.log(`>> Máy chủ đang lắng nghe tại: http://${HOST === '0.0.0.0' ? 'localhost' : HOST}:${PORT}`);
   console.log(`>> Trạng thái Gemini AI: ${geminiService.isConfigured() ? 'ĐÃ KÍCH HOẠT (Model: ' + geminiService.model + ')' : 'CHẾ ĐỘ SOCRATIC ENGINE NỘI BỘ (Chưa có API Key)'}`);
