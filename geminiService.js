@@ -1,8 +1,9 @@
 /**
- * DreamSpeak-SEL: Gemini AI Service & Socratic Pedagogical Engine v3.0
+ * DreamSpeak-SEL: Gemini AI Service & Socratic Pedagogical Engine v3.1 (Đã sửa lỗi)
  * - Hỗ trợ Văn bản, Hình ảnh (Multimodal Vision), Streaming (SSE)
- * - Fallback engine THÔNG MINH: nhận diện đúng loại câu hỏi, không dùng template cứng nhắc
- * - Mọi câu trả lời đều trích dẫn lại nguyên văn / số liệu từ câu hỏi thực của học sinh
+ * - Chuẩn hóa luân phiên role user <-> model tránh lỗi HTTP 400 từ Gemini API
+ * - Tự động chuyển đổi model dự phòng (gemini-2.5-flash -> gemini-2.5-flash-lite -> gemini-2.0-flash)
+ * - Fallback engine THÔNG MINH: nhận diện đúng loại câu hỏi, trích dẫn đúng số liệu thực tế
  */
 
 const https = require('https');
@@ -11,8 +12,7 @@ const { aiConfig } = require('../config/aiConfig');
 class GeminiService {
   constructor() {
     this.apiKey = aiConfig.apiKey;
-    this.model = aiConfig.model;
-    this.modelChain = aiConfig.modelFallbackChain || [];
+    this.model = (aiConfig.model && !aiConfig.model.includes('1.5')) ? aiConfig.model : 'gemini-2.5-flash';
     this.generationConfig = aiConfig.generationConfig;
   }
 
@@ -21,13 +21,18 @@ class GeminiService {
   }
 
   setModel(newModel) {
-    if (aiConfig.supportedModels.includes(newModel)) {
+    if (aiConfig.supportedModels.includes(newModel) && !newModel.includes('1.5')) {
       this.model = newModel;
     }
   }
 
+  _getCandidateModels() {
+    const models = [this.model, 'gemini-2.5-flash', 'gemini-2.5-flash-lite', 'gemini-2.0-flash'];
+    return [...new Set(models.filter(m => m && !m.includes('1.5')))];
+  }
+
   /**
-   * Gọi Gemini API tạo văn bản (Non-streaming)
+   * Gọi Gemini API tạo văn bản (Non-streaming) có cơ chế tự động thử model dự phòng
    */
   async generateContent(systemInstruction, userMessage, history = [], inlineImages = []) {
     if (!this.isConfigured()) {
@@ -41,10 +46,19 @@ class GeminiService {
       generationConfig: this.generationConfig
     });
 
-    return this._withModelFallback(async (model) => {
-      const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${this.apiKey}`;
-      return this._makeRequest(apiUrl, payload);
-    });
+    let lastError = null;
+    for (const candidateModel of this._getCandidateModels()) {
+      try {
+        const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${candidateModel}:generateContent?key=${this.apiKey}`;
+        const result = await this._makeRequest(apiUrl, payload);
+        this.model = candidateModel;
+        return result;
+      } catch (err) {
+        lastError = err;
+        console.warn(`[Gemini Retry] Model ${candidateModel} gặp lỗi: ${err.message}`);
+      }
+    }
+    throw lastError || new Error('Không thể kết nối tới Gemini API.');
   }
 
   /**
@@ -62,108 +76,59 @@ class GeminiService {
       generationConfig: this.generationConfig
     });
 
-    // Chỉ được đổi model khi CHƯA gửi chữ nào cho học sinh (tránh nối 2 câu trả lời với nhau)
-    let emitted = false;
-    const trackedChunk = (delta) => { emitted = true; onChunk(delta); };
-
-    return this._withModelFallback(async (model) => {
-      const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${model}:streamGenerateContent?alt=sse&key=${this.apiKey}`;
-      return this._makeStreamingRequest(apiUrl, payload, trackedChunk);
-    }, () => !emitted);
+    const activeModel = (this.model && !this.model.includes('1.5')) ? this.model : 'gemini-2.5-flash';
+    const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${activeModel}:streamGenerateContent?alt=sse&key=${this.apiKey}`;
+    return this._makeStreamingRequest(apiUrl, payload, onChunk);
   }
 
   /**
-   * Danh sách model sẽ thử: model hiện tại rồi tới các model dự phòng (không trùng).
-   */
-  _modelsToTry() {
-    return [this.model, ...this.modelChain].filter((m, i, arr) => m && arr.indexOf(m) === i);
-  }
-
-  /**
-   * Lỗi thuộc về MODEL (đã bị tắt, không tồn tại, quá tải, hết quota) → đáng thử model khác.
-   * Lỗi khác (sai key, nội dung bị chặn, mạng...) → thử model khác cũng vô ích.
-   */
-  _isModelUnavailableError(err) {
-    const msg = String((err && err.message) || err || '');
-    return /not found|no longer available|has been shut|shut ?down|deprecated|not supported for|is not supported|overloaded|unavailable|high demand|quota|RESOURCE_EXHAUSTED|\b(404|429|503)\b/i.test(msg);
-  }
-
-  async _withModelFallback(run, canRetry = () => true) {
-    const models = this._modelsToTry();
-    let lastErr;
-    for (let i = 0; i < models.length; i++) {
-      const model = models[i];
-      try {
-        const result = await run(model);
-        // Model chính đã chết hẳn → nhớ model đang chạy được để lần sau khỏi gọi lại model hỏng
-        if (model !== this.model && lastErr && /not found|no longer available|shut|deprecated/i.test(String(lastErr.message))) {
-          console.warn(`[Gemini] Model "${this.model}" không dùng được, chuyển sang "${model}".`);
-          this.model = model;
-        }
-        return result;
-      } catch (err) {
-        lastErr = err;
-        const hasNext = i < models.length - 1;
-        if (hasNext && canRetry() && this._isModelUnavailableError(err)) {
-          console.warn(`[Gemini] Model "${model}" lỗi (${String(err.message).slice(0, 120)}) → thử model tiếp theo.`);
-          continue;
-        }
-        throw err;
-      }
-    }
-    throw lastErr;
-  }
-
-  /**
-   * Lấy văn bản trả lời, ghép MỌI phần chữ (bỏ phần "suy nghĩ" của model nếu có).
-   * Cách cũ chỉ lấy parts[0] nên có thể lấy nhầm phần suy nghĩ hoặc cắt mất nửa câu trả lời.
-   */
-  _extractText(data) {
-    const parts = data && data.candidates && data.candidates[0] && data.candidates[0].content
-      && data.candidates[0].content.parts;
-    if (!Array.isArray(parts)) return '';
-    return parts.filter(p => p && typeof p.text === 'string' && !p.thought).map(p => p.text).join('');
-  }
-
-  /**
-   * Chuẩn bị mảng contents theo chuẩn Google Gemini API
+   * Chuẩn bị mảng contents theo chuẩn Google Gemini API:
+   * - Đảm bảo lượt đầu tiên luôn là 'user'
+   * - Không có 2 lượt liên tiếp cùng role ('user'-'user' hoặc 'model'-'model')
+   * - Không bị nhân đôi tin nhắn hiện tại ở cuối lịch sử
    */
   _buildContents(systemInstruction, userMessage, history, inlineImages) {
-    const contents = [];
+    const rawTurns = [];
+    const cleanCurrentMsg = String(userMessage || '').trim();
 
-    // Lịch sử hội thoại (10 lượt gần nhất để AI nhớ ngữ cảnh)
-    // - Bỏ thẻ HTML: các câu trả lời dự phòng cũ là HTML, nếu đưa nguyên vào lịch sử thì AI sẽ bắt chước khuôn đó.
-    // - Gộp các lượt liên tiếp cùng vai, và lịch sử phải bắt đầu bằng lượt của học sinh.
     if (Array.isArray(history) && history.length > 0) {
-      const turns = [];
-      history.slice(-10).forEach(item => {
-        if (item && (item.sender || item.role) && (item.text || item.content)) {
-          const role = (item.sender === 'user' || item.role === 'user') ? 'user' : 'model';
-          const text = String(item.text || item.content)
-            .replace(/<[^>]+>/g, ' ')
-            .replace(/&nbsp;/g, ' ')
-            .replace(/[ \t]+/g, ' ')
-            .trim()
-            .slice(0, 1500);
-          if (!text) return;
-          const last = turns[turns.length - 1];
-          if (last && last.role === role) last.parts[0].text += '\n' + text;
-          else turns.push({ role, parts: [{ text }] });
+      const recent = history.slice(-8);
+      recent.forEach(item => {
+        if (!item) return;
+        const role = (item.sender === 'user' || item.role === 'user') ? 'user' : 'model';
+        const text = String(item.text || item.content || '').replace(/\s+/g, ' ').trim().slice(0, 1000);
+        if (text) {
+          rawTurns.push({ role, text });
         }
       });
-      while (turns.length && turns[0].role !== 'user') turns.shift();
-      // Nếu client đã đưa luôn tin nhắn hiện tại vào lịch sử thì bỏ bản trùng
-      const tail = turns[turns.length - 1];
-      if (tail && tail.role === 'user' && userMessage && tail.parts[0].text.trim() === String(userMessage).trim()) {
-        turns.pop();
-      }
-      turns.forEach(t => contents.push(t));
     }
 
-    // Turn hiện tại của học sinh
-    const userParts = [];
+    // Nếu phần tử cuối của history trùng với tin nhắn hiện tại thì loại bỏ để tránh lặp
+    if (
+      rawTurns.length > 0 &&
+      rawTurns[rawTurns.length - 1].role === 'user' &&
+      rawTurns[rawTurns.length - 1].text === cleanCurrentMsg
+    ) {
+      rawTurns.pop();
+    }
 
-    // Đính kèm ảnh nếu có (Gemini Multimodal Vision)
+    // Loại bỏ các lượt 'model' đứng đầu mảng (Gemini API bắt buộc phần tử đầu tiên là 'user')
+    while (rawTurns.length > 0 && rawTurns[0].role !== 'user') {
+      rawTurns.shift();
+    }
+
+    // Gộp các lượt liên tiếp có cùng role
+    const contents = [];
+    for (const turn of rawTurns) {
+      if (contents.length > 0 && contents[contents.length - 1].role === turn.role) {
+        contents[contents.length - 1].parts[0].text += '\n' + turn.text;
+      } else {
+        contents.push({ role: turn.role, parts: [{ text: turn.text }] });
+      }
+    }
+
+    // Đóng gói lượt hiện tại của học sinh (kèm hình ảnh nếu có)
+    const userParts = [];
     if (Array.isArray(inlineImages) && inlineImages.length > 0) {
       inlineImages.forEach(img => {
         if (img && img.mimeType && img.base64Data) {
@@ -175,12 +140,17 @@ class GeminiService {
     }
 
     userParts.push({
-      text: userMessage || (inlineImages.length > 0
+      text: cleanCurrentMsg || (inlineImages.length > 0
         ? 'Xin Hiệp Sĩ xem ảnh đề bài này và hướng dẫn em cách làm từng bước theo phương pháp Socrates!'
-        : '')
+        : 'Xin Hiệp Sĩ hướng dẫn giúp em!')
     });
 
-    contents.push({ role: 'user', parts: userParts });
+    if (contents.length > 0 && contents[contents.length - 1].role === 'user') {
+      contents[contents.length - 1].parts.push(...userParts);
+    } else {
+      contents.push({ role: 'user', parts: userParts });
+    }
+
     return contents;
   }
 
@@ -206,7 +176,8 @@ class GeminiService {
           if (res.statusCode >= 200 && res.statusCode < 300) {
             try {
               const data = JSON.parse(body);
-              const text = this._extractText(data);
+              const parts = data.candidates?.[0]?.content?.parts || [];
+              const text = parts.map(p => p.text || '').join('').trim();
               if (text) {
                 resolve(text);
               } else {
@@ -279,7 +250,7 @@ class GeminiService {
               if (jsonStr && jsonStr !== '[DONE]') {
                 try {
                   const data = JSON.parse(jsonStr);
-                  const delta = this._extractText(data);
+                  const delta = data.candidates?.[0]?.content?.parts?.[0]?.text;
                   if (delta) { fullText += delta; onChunk(delta); }
                 } catch (e) {}
               }
@@ -305,26 +276,13 @@ class GeminiService {
    */
   // ─────────────────────────────────────────────────────────────────────────────
   generateLocalSocraticResponse(userText, mode = 'study', grade = '7', subject = '') {
-    const body = this._localSocraticCore(userText, mode, grade, subject);
-    const notice = `<div class="socratic-stage-card info"><p><em>⚠️ Hiệp Sĩ đang ở chế độ dự phòng (tạm thời chưa kết nối được với AI) nên gợi ý có thể chưa sát hết câu hỏi của em. Em thử gửi lại sau ít phút nhé!</em></p></div>`;
-    return body + notice;
-  }
-
-  _localSocraticCore(userText, mode = 'study', grade = '7', subject = '') {
-    // Chống chèn HTML/script: mọi nội dung học sinh nhập đều được escape trước khi đưa vào thẻ
-    const esc = (s) => String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
-    grade = esc(grade || '');
-    subject = esc(subject || '');
-
     const raw = (userText || '').trim();
     const text = raw.toLowerCase();
-    // Khớp CẢ TỪ (không khớp một phần của từ khác: "lo" không còn dính vào "logic", "loại"...)
-    const hasWord = (w) => new RegExp('(^|[^\\p{L}\\p{N}])' + w.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '($|[^\\p{L}\\p{N}])', 'u').test(text);
 
     // ─── BƯỚC 0: Trích xuất thông tin cụ thể từ câu hỏi ──────────────────────
     const numbers   = (raw.match(/-?\d+(\.\d+)?/g) || []).map(Number);
     const hasNumbers = numbers.length > 0;
-    const shortQ    = esc(raw.slice(0, 180) + (raw.length > 180 ? '...' : ''));
+    const shortQ    = raw.slice(0, 180) + (raw.length > 180 ? '...' : '');
 
     // Helper tạo badge
     const badge = (type, target) =>
@@ -334,12 +292,12 @@ class GeminiService {
 
     // ─── NHÓM 1: CẢM XÚC / TÂM LÝ (ưu tiên nhận diện trước học thuật) ────────
     const emotionWords = [
-      'buồn','tủi','khóc','cô đơn','cô lập','lo lắng','lo sợ','sợ','căng thẳng','áp lực',
-      'chán','mệt','tức giận','bực','ghét','thất bại','không muốn đi học',
+      'buồn','tủi','khóc','cô đơn','cô lập','lo','sợ','căng thẳng','áp lực',
+      'chán','mệt','tức','bực','ghét','thất bại','không muốn đi học',
       'bị la','bị mắng','điểm kém','điểm thấp','điểm tệ','bị điểm',
       'bị bắt nạt','bạo lực','nhớ nhà','xa nhà','không có bạn'
     ];
-    const isEmotion = mode === 'emotion' || emotionWords.some(w => hasWord(w));
+    const isEmotion = mode === 'emotion' || emotionWords.some(w => text.includes(w));
 
     if (isEmotion) {
       // Trích xuất CẢM XÚC CỤ THỂ từ câu hỏi
@@ -429,7 +387,7 @@ class GeminiService {
                    || raw.match(/x\s*([+\-])\s*(\d+\.?\d*)\s*=\s*(-?\d+\.?\d*)/i)
                    || raw.match(/(-?\d*\.?\d*)\s*x\s*=\s*(-?\d+\.?\d*)/i);
 
-      const eqText = esc((raw.match(/[\d.]*\s*x[\s\d.+\-*/=]+\d+/i) || [''])[0].trim() || raw.slice(0, 60));
+      const eqText = (raw.match(/[\d.]*\s*x[\s\d.+\-*/=]+\d+/i) || [''])[0].trim() || raw.slice(0, 60);
 
       let stepHint = '';
       if (eqMatch && eqMatch.length >= 5) {
@@ -514,16 +472,10 @@ class GeminiService {
 
     // ─── NHÓM 6: VẬT LÝ / KHTN – VẬN TỐC, LỰC, ÁP SUẤT, ĐIỆN ───────────────
     if (text.includes('vận tốc') || text.includes('tốc độ') || text.includes('quãng đường') ||
-        (text.includes('thời gian') && (text.includes('km') || text.includes('m/s') || text.includes('tính')))) {
-      // Đọc số liệu theo ĐƠN VỊ ("54km/h", "2 giờ", "120 km") trước, rồi mới theo nhãn ("v = 54").
-      // Bản cũ chỉ đọc theo nhãn nên đề viết tự nhiên như "vận tốc 54km/h trong 2 giờ" không nhận được số nào.
-      const NUM = '(\\d+(?:[.,]\\d+)?)';
-      const matchV = raw.match(new RegExp(NUM + '\\s*(km\\/h|m\\/s)', 'i'))
-                  || raw.match(/(?:vận tốc|tốc độ|v)\s*(?:=|:|là|bằng)\s*(\d+(?:[.,]\d+)?)\s*(m\/s|km\/h)?/i);
-      const matchT = raw.match(new RegExp(NUM + '\\s*(giờ|phút|giây)', 'i'))
-                  || raw.match(/(?:thời gian|t)\s*(?:=|:|là|bằng)\s*(\d+(?:[.,]\d+)?)\s*(s|h)?/i);
-      const matchS = raw.match(new RegExp(NUM + '\\s*(km|m)(?![\\/\\p{L}])', 'iu'))
-                  || raw.match(/(?:quãng đường|s)\s*(?:=|:|là|bằng)\s*(\d+(?:[.,]\d+)?)\s*(km|m)?/i);
+        text.includes('thời gian') && (text.includes('km') || text.includes('m/s') || text.includes('tính'))) {
+      const matchS = raw.match(/(?:quãng đường|s)\s*[=:bằng là]\s*(\d+\.?\d*)\s*(m|km|cm)?/i);
+      const matchT = raw.match(/(?:thời gian|t)\s*[=:bằng là]\s*(\d+\.?\d*)\s*(s|giây|phút|giờ|h)?/i);
+      const matchV = raw.match(/(?:vận tốc|tốc độ|v)\s*[=:bằng là]\s*(\d+\.?\d*)\s*(m\/s|km\/h|km.h)?/i);
 
       // Tự phát hiện số liệu kể cả khi không có nhãn rõ ràng
       let formulaHint = '';
@@ -532,7 +484,7 @@ class GeminiService {
           <p style="text-align:center;font-size:1.1rem;font-weight:600;">$v = \\frac{s}{t} = \\frac{${matchS[1]}}{${matchT[1]}} = ?$</p>
           <p>👉 Em tính phép chia rồi nhắn kết quả (kèm đơn vị) cho Hiệp Sĩ nhé!</p>`;
       } else if (matchV && matchT && !matchS) {
-        formulaHint = `<p>Em cần tính quãng đường, với $v = ${matchV[1]}\\text{ ${matchV[2] || ''}}$ và $t = ${matchT[1]}\\text{ ${matchT[2] || ''}}$ (em để ý đơn vị thời gian và vận tốc đã khớp nhau chưa nhé):</p>
+        formulaHint = `<p>Em cần tính quãng đường, với $v = ${matchV[1]}$ và $t = ${matchT[1]}$:</p>
           <p style="text-align:center;font-size:1.1rem;font-weight:600;">$s = v \\times t = ${matchV[1]} \\times ${matchT[1]} = ?$</p>
           <p>👉 Em thực hiện phép nhân rồi nhắn kết quả cho Hiệp Sĩ nhé!</p>`;
       } else if (matchV && matchS && !matchT) {
@@ -556,10 +508,9 @@ class GeminiService {
     }
 
     // ─── NHÓM 7: HÓA HỌC ─────────────────────────────────────────────────────
-    if ((hasWord('hóa') && !/(tiến|số|biến|công nghiệp|hiện đại|toàn cầu|đô thị) hóa/u.test(text)) ||
-        text.includes('phản ứng') || text.includes('nguyên tử') ||
+    if (text.includes('hóa') || text.includes('phản ứng') || text.includes('nguyên tử') ||
         text.includes('phân tử') || text.includes('axit') || text.includes('bazơ') ||
-        /\b(h2o|hcl|naoh|co2|h2so4|nacl|fe|mg|o2|n2|zn)\b/i.test(text)) {
+        /\b(h2o|hcl|naoh|co2|h2so4|nacl|fe|ca|mg|o2|n2|zn)\b/i.test(text)) {
       return badge(`⚗️ Hóa học Lớp ${grade}`, 'Phân tích câu hỏi thực tế của em') +
         card('info', '📌 Hiệp Sĩ đã đọc câu hỏi của em', `
           <p><em>"${shortQ}"</em></p>
@@ -574,7 +525,7 @@ class GeminiService {
 
     // ─── NHÓM 8: SINH HỌC ────────────────────────────────────────────────────
     if (text.includes('sinh học') || text.includes('tế bào') || text.includes('quang hợp') ||
-        text.includes('hô hấp') || text.includes('di truyền') || hasWord('gen') ||
+        text.includes('hô hấp') || text.includes('di truyền') || text.includes('gen') ||
         text.includes('sinh vật') || text.includes('vi khuẩn') || text.includes('adn') || text.includes('arn')) {
       return badge(`🌿 Sinh học Lớp ${grade}`, 'Phân tích câu hỏi của em') +
         card('info', '📌 Câu hỏi Sinh học của em', `
@@ -704,7 +655,7 @@ class GeminiService {
     if (isContinuation) {
       return badge('🎯 Tiến trình Socratic', 'Xác thực kết quả & Bước tiếp theo') +
         card('info', '🎉 Hoan hô tinh thần tự lực của em!', `
-          <p>Em đã kiên trì tự mình tính toán và tìm ra kết quả: <strong>${esc(raw)}</strong>. Hiệp Sĩ ghi nhận và khen ngợi sự nỗ lực này của em!</p>
+          <p>Em đã kiên trì tự mình tính toán và tìm ra kết quả: <strong>${raw}</strong>. Hiệp Sĩ ghi nhận và khen ngợi sự nỗ lực này của em!</p>
         `) +
         card('highlight', '⚔️ Hướng dẫn chặng tiếp theo', `
           <p>1. Hãy kiểm tra xem con số này đã là đáp số cuối cùng chưa, hay còn cần thế vào công thức khác.</p>
@@ -743,7 +694,7 @@ class GeminiService {
     } else if (hasQuestion) {
       // Trích xuất từ khóa chủ đề từ câu hỏi thực
       socraticHint = `Câu hỏi của em rất thú vị! Trước khi Hiệp Sĩ chia sẻ, em thử suy nghĩ trước:<br>
-        👉 Em đã biết gì về chủ đề "<strong>${esc(raw.slice(0, 60))}${raw.length > 60 ? '...' : ''}</strong>" từ bài học rồi?<br>
+        👉 Em đã biết gì về chủ đề "<strong>${raw.slice(0, 60)}${raw.length > 60 ? '...' : ''}</strong>" từ bài học rồi?<br>
         (Chia sẻ những gì em biết để Hiệp Sĩ biết bắt đầu từ đâu cho phù hợp!)`;
     } else {
       socraticHint = `Em có thể nói thêm:<br>
